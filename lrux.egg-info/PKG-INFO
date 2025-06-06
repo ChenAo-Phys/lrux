@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: lrux
+Version: 0.0.1
+Summary: Fast low-rank updates (LRU) of matrix determinants and pfaffians in JAX
+Author: Ao Chen, Christopher Roth
+Author-email: chenao.phys@gmail.com
+Requires-Python: >=3.9
+License-File: LICENSE
+Requires-Dist: jax>=0.4.4
+Dynamic: author
+Dynamic: author-email
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
