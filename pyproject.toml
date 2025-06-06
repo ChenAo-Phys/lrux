@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lrux"
+version = "0.0.1"
+description = "Fast low-rank updates (LRU) of matrix determinants and pfaffians in JAX"
+authors = [
+    { name = "Ao Chen", email = "chenao.phys@gmail.com" },
+    { name = "Christopher Roth", email = "christopher_roth@utexas.edu" }
+]
+requires-python = ">=3.9"
+dependencies = [
+    "jax>=0.4.4"
+]
