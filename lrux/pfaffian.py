@@ -1,10 +1,11 @@
-from typing import Tuple
+from typing import Tuple, NamedTuple
+from jax import Array
 import jax
 import jax.numpy as jnp
 
 
 @jax.jit
-def _householder_n(x: jax.Array, n: int) -> Tuple[jax.Array, jax.Array, jax.Array]:
+def _householder_n(x: Array, n: int) -> Tuple[Array, Array, Array]:
     arange = jnp.arange(x.size)
     xn = x[n]
     x = jnp.where(arange <= n, jnp.zeros_like(x), x)
@@ -26,7 +27,7 @@ def _householder_n(x: jax.Array, n: int) -> Tuple[jax.Array, jax.Array, jax.Arra
     return v, tau, alpha
 
 
-def _single_pfaffian(A: jax.Array) -> jax.Array:
+def _single_pfaffian(A: Array) -> Array:
     n = A.shape[0]
     if n % 2 == 1:
         return jnp.array(0, dtype=A.dtype)
@@ -48,7 +49,7 @@ def _single_pfaffian(A: jax.Array) -> jax.Array:
         pfaffian_val *= jnp.where(i % 2 == 0, -alpha, 1.0)
         return A, pfaffian_val
 
-    init_val = (A, jnp.array(1.0, dtype=A.dtype))
+    init_val = (A, jnp.array(1, dtype=A.dtype))
     A, pfaffian_val = jax.lax.fori_loop(0, A.shape[0] - 2, body_fun, init_val)
     pfaffian_val *= A[n - 2, n - 1]
 
@@ -56,7 +57,7 @@ def _single_pfaffian(A: jax.Array) -> jax.Array:
 
 
 @jax.custom_vjp
-def pf(A: jax.Array) -> jax.Array:
+def pf(A: Array) -> Array:
     """
     Return pfaffian of the input matrix A. A customized vjp is used for faster gradients.
     """
@@ -67,27 +68,32 @@ def pf(A: jax.Array) -> jax.Array:
         return jnp.ones(batch, A.dtype)
 
     A = A.reshape(-1, *A.shape[-2:])
-    pfa = jax.vmap(_single_pfaffian)(A)
-    pfa = pfa.reshape(batch)
-    return pfa
+    pfaffian = jax.vmap(_single_pfaffian)(A)
+    pfaffian = pfaffian.reshape(batch)
+    return pfaffian
 
 
-def _pfa_fwd(A: jax.Array) -> Tuple[jax.Array, jax.Array]:
+def _pf_fwd(A: Array) -> Tuple[Array, Array]:
     pfaA = pf(A)
     Ainv = jnp.linalg.inv(A)
     Ainv = (Ainv - jnp.swapaxes(Ainv, -2, -1)) / 2
     return pfaA, pfaA[..., None, None] * Ainv
 
 
-def _pfa_bwd(res: jax.Array, g: jax.Array) -> Tuple[jax.Array]:
+def _pf_bwd(res: Array, g: Array) -> Tuple[Array]:
     return (-res * g[..., None, None] / 2,)
 
 
-pf.defvjp(_pfa_fwd, _pfa_bwd)
+pf.defvjp(_pf_fwd, _pf_bwd)
+
+
+class SlogpfResult(NamedTuple):
+    sign: Array
+    logabspf: Array
 
 
 @jax.custom_vjp
-def logpf(A: jax.Array) -> jax.Array:
+def logpf(A: Array) -> Array:
     """
     Return the log of pfaffian. A customized vjp is used for faster gradients.
     """
@@ -115,13 +121,13 @@ def logpf(A: jax.Array) -> jax.Array:
     return pfaffian_val
 
 
-def _logpf_fwd(A: jax.Array) -> Tuple[jax.Array, jax.Array]:
+def _logpf_fwd(A: Array) -> Tuple[Array, Array]:
     logpfA = logpf(A)
     Ainv = jnp.linalg.inv(A)
     return logpfA, Ainv
 
 
-def _logpf_bwd(res: jax.Array, g: jax.Array) -> Tuple[jax.Array]:
+def _logpf_bwd(res: Array, g: Array) -> Tuple[Array]:
     return (-g * res / 2,)
 
 

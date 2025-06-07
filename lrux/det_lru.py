@@ -1,4 +1,5 @@
 from typing import Optional, Tuple, Union, Sequence
+from jax import Array
 from jax.typing import ArrayLike
 from jax.core import Tracer
 import jax
@@ -7,14 +8,14 @@ import jax.tree_util as jtu
 from jax._src.numpy import reductions
 
 
-def _check_mat(mat: jax.Array) -> None:
+def _check_mat(mat: Array) -> None:
     if mat.ndim != 2 or mat.shape[0] != mat.shape[1]:
         raise ValueError(f"Expect input matrix shape (n, n), got {mat.shape}.")
 
 
 def _standardize_uv(
-    u: Union[int, jax.Array], n: int, dtype: jnp.dtype
-) -> Tuple[jax.Array, jax.Array]:
+    u: Union[int, Array], n: int, dtype: jnp.dtype
+) -> Tuple[Array, Array]:
     if isinstance(u, ArrayLike):
         u = jnp.asarray(u)
         if jnp.issubdtype(u.dtype, jnp.integer):
@@ -28,7 +29,7 @@ def _standardize_uv(
     return u
 
 
-def _check_uv(u: Union[int, jax.Array], v: Union[int, jax.Array]) -> None:
+def _check_uv(u: Union[int, Array], v: Union[int, Array]) -> None:
     rank_u = u[0].shape[1] + u[1].size
     rank_v = v[0].shape[1] + v[1].size
     if rank_u != rank_v:
@@ -37,9 +38,7 @@ def _check_uv(u: Union[int, jax.Array], v: Union[int, jax.Array]) -> None:
         )
 
 
-def _get_R(
-    Ainv: jax.Array, u: Tuple[jax.Array, jax.Array], v: Tuple[jax.Array, jax.Array]
-) -> jax.Array:
+def _get_R(Ainv: Array, u: Tuple[Array, Array], v: Tuple[Array, Array]) -> Array:
     xu_Ainv_xv = jnp.einsum("nk,nm,ml->kl", u[0], Ainv, v[0])
     eu_Ainv_xv = Ainv[u[1]] @ v[0]
     xu_Ainv_ev = u[0].T @ Ainv[:, v[1]]
@@ -48,7 +47,7 @@ def _get_R(
     return uT_Ainv_v.at[jnp.diag_indices_from(uT_Ainv_v)].add(1)
 
 
-def _det_and_lufac(R: jax.Array) -> Tuple[jax.Array, Tuple[jax.Array, jax.Array]]:
+def _det_and_lufac(R: Array) -> Tuple[Array, Tuple[Array, Array]]:
     lu, pivot = jax.scipy.linalg.lu_factor(R)
     iota = jnp.arange(pivot.size, dtype=pivot.dtype)
     parity = reductions.count_nonzero(pivot != iota, axis=-1)
@@ -58,11 +57,11 @@ def _det_and_lufac(R: jax.Array) -> Tuple[jax.Array, Tuple[jax.Array, jax.Array]
 
 
 def _update_Ainv(
-    Ainv: jax.Array,
-    u: Tuple[jax.Array, jax.Array],
-    v: Tuple[jax.Array, jax.Array],
-    lu_and_piv: Tuple[jax.Array, jax.Array],
-) -> jax.Array:
+    Ainv: Array,
+    u: Tuple[Array, Array],
+    v: Tuple[Array, Array],
+    lu_and_piv: Tuple[Array, Array],
+) -> Array:
     uT_Ainv = jnp.concatenate((u[0].T @ Ainv, Ainv[u[1], :]), axis=0)
     Rinv_uT_Ainv = jax.scipy.linalg.lu_solve(lu_and_piv, uT_Ainv)
     Ainv_v = jnp.concatenate((Ainv[:, v[1]], Ainv @ v[0]), axis=1)
@@ -70,11 +69,11 @@ def _update_Ainv(
 
 
 def det_lru(
-    Ainv: jax.Array,
-    u: Union[int, jax.Array, Tuple[jax.Array, jax.Array]],
-    v: Union[int, jax.Array, Tuple[jax.Array, jax.Array]],
+    Ainv: Array,
+    u: Union[int, Array, Tuple[Array, Array]],
+    v: Union[int, Array, Tuple[Array, Array]],
     return_update: bool = False,
-) -> Union[jax.Array, Tuple[jax.Array, jax.Array]]:
+) -> Union[Array, Tuple[Array, Array]]:
     """
     Low-rank update of determinant
     """
@@ -98,7 +97,7 @@ class DetCarrier:
     The pytree carrying intermediate information for low-rank updates.
     """
 
-    def __init__(self, Ainv: jax.Array, a: Optional[jax.Array], b: Optional[jax.Array]):
+    def __init__(self, Ainv: Array, a: Optional[Array], b: Optional[Array]):
         self.Ainv = Ainv
         self.a = a
         self.b = b
@@ -115,14 +114,14 @@ class DetCarrier:
     def __repr__(self):
         return f"DetCarrier(Ainv: {self.Ainv}\na: {self.a}\nb: {self.b})"
 
-    def get_current_Ainv(self) -> jax.Array:
+    def get_current_Ainv(self) -> Array:
         if self.a is None:
             return self.Ainv
         else:
             return self.Ainv - jnp.einsum("tnk,tmk->nm", self.a, self.b)
 
 
-def init_det_carrier(A: jax.Array, max_delay: int, max_rank: int = 1) -> DetCarrier:
+def init_det_carrier(A: Array, max_delay: int, max_rank: int = 1) -> DetCarrier:
     if max_delay <= 0:
         raise ValueError(
             "`max_delay` should be a positive integer. "
@@ -135,7 +134,7 @@ def init_det_carrier(A: jax.Array, max_delay: int, max_rank: int = 1) -> DetCarr
     return DetCarrier(Ainv, a, b)
 
 
-def _update_ab(a: jax.Array, new_a: jax.Array, current_delay: int) -> jax.Array:
+def _update_ab(a: Array, new_a: Array, current_delay: int) -> Array:
     k = new_a.shape[-1]
     if k > a.shape[-1]:
         raise ValueError(
@@ -146,12 +145,12 @@ def _update_ab(a: jax.Array, new_a: jax.Array, current_delay: int) -> jax.Array:
 
 def _get_delayed_output(
     carrier: DetCarrier,
-    u: Tuple[jax.Array, jax.Array],
-    v: Tuple[jax.Array, jax.Array],
+    u: Tuple[Array, Array],
+    v: Tuple[Array, Array],
     return_update: bool,
     current_delay: Optional[int],
     tau: int,
-) -> Tuple[jax.Array, jax.Array]:
+) -> Tuple[Array, Array]:
     Ainv = carrier.Ainv
     a = carrier.a[:tau]
     b = carrier.b[:tau]
@@ -185,10 +184,10 @@ def _get_delayed_output(
 
 def _push_Ainv_output(
     carrier: DetCarrier,
-    u: Tuple[jax.Array, jax.Array],
-    v: Tuple[jax.Array, jax.Array],
+    u: Tuple[Array, Array],
+    v: Tuple[Array, Array],
     current_delay: int,
-) -> Tuple[jax.Array, jax.Array]:
+) -> Tuple[Array, Array]:
     Ainv = carrier.get_current_Ainv()
     R = _get_R(Ainv, u, v)
     ratio, lufac = _det_and_lufac(R)
@@ -205,11 +204,11 @@ def _push_Ainv_output(
 
 def det_lru_delayed(
     carrier: DetCarrier,
-    u: Union[int, jax.Array, Tuple[jax.Array, jax.Array]],
-    v: Union[int, jax.Array, Tuple[jax.Array, jax.Array]],
+    u: Union[int, Array, Tuple[Array, Array]],
+    v: Union[int, Array, Tuple[Array, Array]],
     return_update: bool = False,
     current_delay: Optional[int] = None,
-) -> Union[jax.Array, Tuple[jax.Array, DetCarrier]]:
+) -> Union[Array, Tuple[Array, DetCarrier]]:
     """
     Low-rank update of determinant with delayed updates
     """
@@ -234,8 +233,6 @@ def det_lru_delayed(
         is_pushing_Ainv = jnp.logical_and(cond1, cond2)
         args = (carrier, u, v, current_delay)
         delayed_output = lambda c, u, v, i: _get_delayed_output(c, u, v, True, i, tau)
-        return jax.lax.cond(
-            is_pushing_Ainv, _push_Ainv_output, delayed_output, *args
-        )
+        return jax.lax.cond(is_pushing_Ainv, _push_Ainv_output, delayed_output, *args)
     else:
         return _get_delayed_output(carrier, u, v, False, current_delay, tau)
