@@ -8,7 +8,7 @@ import random
 import jax
 import jax.numpy as jnp
 import jax.random as jr
-from lrux import det_lru
+from lrux import det_lru, det_lru_delayed, init_det_carrier
 
 
 def _get_key():
@@ -30,6 +30,8 @@ def test_rank_1(n, dtype):
     u = jr.normal(_get_key(), (n,), dtype)
     v = jr.normal(_get_key(), (n,), dtype)
     A_ = A + jnp.outer(v, u)
+    ratio = det_lru(Ainv, u, v)
+    assert jnp.allclose(ratio, jnp.linalg.det(A_) / detA)
     ratio, new_inv = det_lru(Ainv, u, v, return_update=True)
     assert jnp.allclose(ratio, jnp.linalg.det(A_) / detA)
     assert jnp.allclose(new_inv, jnp.linalg.inv(A_))
@@ -91,3 +93,26 @@ def test_vmap(dtype):
     ratio, new_inv = vmap_lru(Ainv, u, v, True)
     assert jnp.allclose(ratio, jnp.linalg.det(A_) / detA)
     assert jnp.allclose(new_inv, jnp.linalg.inv(A_))
+
+
+@pytest.mark.parametrize("static_argnums", [(3, 4), (3,)])
+@pytest.mark.parametrize("dtype", [jnp.float64, jnp.complex128])
+def test_det_lru_delayed(static_argnums, dtype):
+    n = 10
+    max_rank = 2
+    A = jr.normal(_get_key(), (n, n), dtype)
+    carrier = init_det_carrier(A, max_delay=n // 2, max_rank=max_rank)
+    detA0 = jnp.linalg.det(A)
+
+    lru_fn = jax.jit(det_lru_delayed, static_argnums=static_argnums, donate_argnums=0)
+
+    for current_delay in range(20):
+        k = random.randint(0, max_rank)
+        u = jr.normal(_get_key(), (n, k), dtype)
+        v = jr.normal(_get_key(), (n, k), dtype)
+        ratio, carrier = lru_fn(carrier, u, v, True, current_delay)
+        A += v @ u.T
+        detA1 = jnp.linalg.det(A)
+        print(current_delay, k, ratio, detA1 / detA0)
+        assert jnp.allclose(ratio, detA1 / detA0)
+        detA0 = detA1
