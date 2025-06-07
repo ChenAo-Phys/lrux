@@ -4,25 +4,21 @@ import jax
 import jax.numpy as jnp
 
 
-@jax.jit
-def _householder_n(x: Array, n: int) -> Tuple[Array, Array, Array]:
-    arange = jnp.arange(x.size)
-    xn = x[n]
-    x = jnp.where(arange <= n, jnp.zeros_like(x), x)
-    sigma = jnp.vdot(x, x)
-    norm_x = jnp.sqrt(xn.conj() * xn + sigma)
+def householder(x: jax.Array):
+    x0 = x[0]
+    sigma = jnp.vdot(x[1:], x[1:])
+    norm_x = jnp.sqrt(x0.conj() * x0 + sigma)
 
-    phase = jnp.where(xn == 0.0, 1.0, xn / jnp.abs(xn))
-    vn = xn + phase * norm_x
+    phase = jnp.where(x0 == 0.0, 1.0, jnp.sign(x0))
     alpha = -phase * norm_x
 
-    v = jnp.where(arange == n, vn, x)
-    v /= jnp.linalg.norm(v)
+    v = x.at[0].subtract(alpha)
+    v *= jax.lax.rsqrt(jnp.vdot(v, v))
 
     cond = sigma == 0.0
-    v = jnp.where(cond, jnp.zeros_like(x), v)
+    v = jnp.where(cond, 0, v)
     tau = jnp.where(cond, 0, 2)
-    alpha = jnp.where(cond, xn, alpha)
+    alpha = jnp.where(cond, x0, alpha)
 
     return v, tau, alpha
 
@@ -39,21 +35,20 @@ def _single_pfaffian(A: Array) -> Array:
         a, b, c, d, e, f = A[jnp.triu_indices(n, 1)]
         return a * f - b * e + d * c
 
-    def body_fun(i, val):
-        A, pfaffian_val = val
-        v, tau, alpha = _householder_n(A[:, i], i + 1)
+    pfaffian_mul = []
+    for i in range(n - 2):
+        v, tau, alpha = householder(A[1:, 0])
+        A = A[1:, 1:]
         w = tau * A @ v.conj()
-        A += jnp.outer(v, w) - jnp.outer(w, v)
+        vw = jnp.outer(v, w)
+        A += vw - vw.T
 
-        pfaffian_val *= 1 - tau
-        pfaffian_val *= jnp.where(i % 2 == 0, -alpha, 1.0)
-        return A, pfaffian_val
+        pfaffian_mul.append(1 - tau)
+        if i % 2 == 0:
+            pfaffian_mul.append(-alpha)
 
-    init_val = (A, jnp.array(1, dtype=A.dtype))
-    A, pfaffian_val = jax.lax.fori_loop(0, A.shape[0] - 2, body_fun, init_val)
-    pfaffian_val *= A[n - 2, n - 1]
-
-    return pfaffian_val
+    pfaffian_mul.append(A[-2, -1])
+    return jnp.prod(jnp.asarray(pfaffian_mul))
 
 
 @jax.custom_vjp
@@ -93,12 +88,10 @@ class SlogpfResult(NamedTuple):
 
 
 @jax.custom_vjp
-def logpf(A: Array) -> Array:
+def slogpf(A: Array) -> Array:
     """
     Return the log of pfaffian. A customized vjp is used for faster gradients.
     """
-    if not jnp.iscomplex(A):
-        raise ValueError("`logpf` only accepts complex inputs.")
 
     n = A.shape[0]
     if n % 2 == 1:
@@ -106,7 +99,7 @@ def logpf(A: Array) -> Array:
 
     def body_fun(i, val):
         A, logpf_val = val
-        v, tau, alpha = _householder_n(A[:, i], i + 1)
+        v, tau, alpha = householder(A[:, i], i + 1)
         w = tau * A @ v.conj()
         A += jnp.outer(v, w) - jnp.outer(w, v)
 
@@ -121,14 +114,14 @@ def logpf(A: Array) -> Array:
     return pfaffian_val
 
 
-def _logpf_fwd(A: Array) -> Tuple[Array, Array]:
-    logpfA = logpf(A)
+def _slogpf_fwd(A: Array) -> Tuple[Array, Array]:
+    logpfA = slogpf(A)
     Ainv = jnp.linalg.inv(A)
     return logpfA, Ainv
 
 
-def _logpf_bwd(res: Array, g: Array) -> Tuple[Array]:
+def _slogpf_bwd(res: Array, g: Array) -> Tuple[Array]:
     return (-g * res / 2,)
 
 
-logpf.defvjp(_logpf_fwd, _logpf_bwd)
+slogpf.defvjp(_slogpf_fwd, _slogpf_bwd)
