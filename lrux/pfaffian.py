@@ -5,9 +5,42 @@ import jax
 import jax.numpy as jnp
 
 
-class SlogpfResult(NamedTuple):
-    sign: Array
-    logabspf: Array
+def _check_input(A: Array, method: str) -> None:
+    if A.ndim < 2 or A.shape[-2] != A.shape[-1]:
+        raise ValueError(
+            f"The expected input is a square matrix or a batch of them, got input shape {A.shape}."
+        )
+
+    if method not in ("householder", "schur"):
+        raise ValueError(
+            f"Unknown pfaffian method '{method}'. Supported methods include 'householder' and 'schur'"
+        )
+
+    if method == "schur" and jnp.issubdtype(A, jnp.complexfloating):
+        raise ValueError("The schur method is only available for real dtypes.")
+
+    return (A - jnp.swapaxes(A, -2, -1)) / 2
+
+
+def _pfaffian_direct(A: Array) -> Array:
+    n = A.shape[-1]
+    batch = A.shape[:-2]
+
+    if n % 2 == 1:
+        return jnp.zeros(batch, dtype=A.dtype)
+
+    # By convention, pfaffian of an empty matrix is 1
+    elif n == 0:
+        return jnp.ones(batch, dtype=A.dtype)
+
+    elif n == 2:
+        return A[..., 0, 1]
+
+    elif n == 4:
+        idx = jnp.triu_indices(n, 1)
+        A_upper = A[..., idx[0], idx[1]]
+        a, b, c, d, e, f = jnp.moveaxis(A_upper, -1, 0)
+        return a * f - b * e + d * c
 
 
 def householder(x: jax.Array):
@@ -29,45 +62,8 @@ def householder(x: jax.Array):
     return v, tau, alpha
 
 
-def _pfaffian_direct(A: Array, return_log: bool) -> Union[Array, Tuple[Array, Array]]:
-    n = A.shape[0]
-
-    if n % 2 == 1:
-        val = jnp.array(0, dtype=A.dtype)
-
-    # By convention, pfaffian of an empty matrix is 1
-    elif n == 0:
-        val = jnp.array(1, dtype=A.dtype)
-
-    elif n == 2:
-        val = A[0, 1]
-
-    elif n == 4:
-        a, b, c, d, e, f = A[jnp.triu_indices(n, 1)]
-        val = a * f - b * e + d * c
-
-    if return_log:
-        return jnp.sign(val), jnp.log(jnp.abs(val))
-    else:
-        return val
-
-
-def _pfaffian_schur(A: Array, return_log: bool) -> Union[Array, Tuple[Array, Array]]:
-    T, Z = jax.scipy.linalg.schur(A)
-    vals = jnp.diag(T, k=1)[::2]
-    s, _ = jnp.linalg.slogdet(Z)
-
-    if return_log:
-        sign = s * jnp.prod(jnp.sign(vals))
-        log = jnp.sum(jnp.log(jnp.abs(vals)))
-        return sign, log
-    else:
-        return s * jnp.prod(vals)
-
-
-def _pfaffian_householder(
-    A: Array, return_log: bool
-) -> Union[Array, Tuple[Array, Array]]:
+@jax.custom_jvp
+def _slogpf_householder(A: Array) -> Tuple[Array, Array]:
     vals = []
     for i in range(A.shape[0] - 2):
         v, tau, alpha = householder(A[1:, 0])
@@ -79,70 +75,85 @@ def _pfaffian_householder(
         vals.append(1 - tau)
         if i % 2 == 0:
             vals.append(-alpha)
-            
+
     vals.append(A[-2, -1])
     vals = jnp.asarray(vals)
 
-    if return_log:
-        sign = jnp.prod(jnp.sign(vals))
-        log = jnp.sum(jnp.log(jnp.abs(vals)))
-        return sign, log
-    else:
-        return jnp.prod(vals)
+    sign = jnp.prod(jnp.sign(vals))
+    log = jnp.sum(jnp.log(jnp.abs(vals)))
+    return sign, log
 
 
-def _single_pfaffian(
-    A: Array, return_log: bool, method: str
-) -> Union[Array, Tuple[Array, Array]]:
-    n = A.shape[0]
+@jax.custom_jvp
+def _slogpf_schur(A: Array) -> Tuple[Array, Array]:
+    T, Z = jax.scipy.linalg.schur(A)
+    vals = jnp.diag(T, k=1)[::2]
+    s, _ = jnp.linalg.slogdet(Z)
 
-    if n <= 4 or n % 2 == 1:
-        return _pfaffian_direct(A, return_log)
-    elif method == "schur":
-        return _pfaffian_schur(A, return_log)
-    else:
-        return _pfaffian_householder(A, return_log)
+    sign = s * jnp.prod(jnp.sign(vals))
+    log = jnp.sum(jnp.log(jnp.abs(vals)))
+    return sign, log
 
 
-def _batched_pfaffian(
-    A: Array, return_log: bool, method: str
-) -> Union[Array, SlogpfResult]:
-    if A.ndim < 2 or A.shape[-2] != A.shape[-1]:
-        raise ValueError(
-            f"The expected input is a square matrix or a batch of them, got input shape {A.shape}."
-        )
-
-    if method not in ("householder", "schur"):
-        raise ValueError(
-            f"Unknown pfaffian method '{method}'. Supported methods include 'householder' and 'schur'"
-        )
-    
-    if method == "schur" and jnp.issubdtype(A, jnp.complexfloating):
-        raise ValueError("The schur method is only available for real dtypes.")
-
-    batch = A.shape[:-2]
-    A = A.reshape(-1, *A.shape[-2:])
-    batched_fn = jax.vmap(_single_pfaffian, in_axes=(0, None, None))
-    outputs = batched_fn(A, return_log, method)
-
-    if return_log:
-        outputs = SlogpfResult(outputs[0].reshape(batch), outputs[1].reshape(batch))
-    else:
-        outputs = outputs.reshape(batch)
-    return outputs
+class SlogpfResult(NamedTuple):
+    sign: Array
+    logabspf: Array
 
 
-@partial(jax.jit, static_argnames=('method',))
-def pf(A: Array, *, method: str = "householder") -> Array:
-    """
-    Return pfaffian of the input matrix A. A customized vjp is used for faster gradients.
-    """
-    return _batched_pfaffian(A, return_log=False, method=method)
-
-
-@partial(jax.jit, static_argnames=('method',))
+@partial(jax.jit, static_argnames=("method",))
 def slogpf(A: Array, *, method: str = "householder") -> SlogpfResult:
     """
     Return the log of pfaffian. A customized vjp is used for faster gradients.
     """
-    return _batched_pfaffian(A, return_log=True, method=method)
+    A = _check_input(A, method)
+
+    n = A.shape[-1]
+    if n <= 4 or n % 2 == 1:
+        pfA = _pfaffian_direct(A)
+        return SlogpfResult(jnp.sign(pfA), jnp.log(jnp.abs(pfA)))
+    else:
+        batch = A.shape[:-2]
+        A = A.reshape(-1, *A.shape[-2:])
+        slogpf_fn = _slogpf_householder if method == "householder" else _slogpf_schur
+        batched_fn = jax.vmap(slogpf_fn)
+        outputs = batched_fn(A)
+        return SlogpfResult(outputs[0].reshape(batch), outputs[1].reshape(batch))
+
+
+@partial(jax.jit, static_argnames=("method",))
+def pf(A: Array, *, method: str = "householder") -> Array:
+    """
+    Return pfaffian of the input matrix A. A customized vjp is used for faster gradients.
+    """
+    A = _check_input(A, method)
+
+    n = A.shape[-1]
+    if n <= 4 or n % 2 == 1:
+        return _pfaffian_direct(A)
+    else:
+        sign, log = slogpf(A, method=method)
+        return sign * jnp.exp(log)
+
+
+def _slogpf_jvp(
+    primals: Tuple[Array], tangents: Tuple[Array], method: str
+) -> Tuple[Tuple[Array, Array], Tuple[Array, Array]]:
+    (A,) = primals
+    (dA,) = tangents
+    A = (A - A.T) / 2
+
+    slogpf_fn = _slogpf_householder if method == "householder" else _slogpf_schur
+    sign, ans = slogpf_fn(A)
+    ans_dot = jnp.trace(jnp.linalg.solve(A, dA)) / 2
+
+    if jnp.issubdtype(A.dtype, jnp.complexfloating):
+        sign_dot = 1j * sign * ans_dot.imag
+        ans_dot = ans_dot.real
+    else:
+        sign_dot = jnp.zeros_like(sign)
+
+    return (sign, ans), (sign_dot, ans_dot)
+
+
+_slogpf_householder.defjvp(partial(_slogpf_jvp, method="householder"))
+_slogpf_schur.defjvp(partial(_slogpf_jvp, method="schur"))
