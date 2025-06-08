@@ -1,4 +1,4 @@
-from typing import Tuple, NamedTuple, Union
+from typing import Tuple, NamedTuple, Optional
 from jax import Array
 from functools import partial
 import jax
@@ -11,9 +11,10 @@ def _check_input(A: Array, method: str) -> None:
             f"The expected input is a square matrix or a batch of them, got input shape {A.shape}."
         )
 
-    if method not in ("householder", "schur"):
+    if method not in ("householder", "householder_for", "schur"):
         raise ValueError(
-            f"Unknown pfaffian method '{method}'. Supported methods include 'householder' and 'schur'"
+            f"Unknown pfaffian method '{method}'. "
+            "Supported methods include 'householder', 'householder_for' and 'schur'."
         )
 
     if method == "schur" and jnp.issubdtype(A, jnp.complexfloating):
@@ -43,15 +44,24 @@ def _pfaffian_direct(A: Array) -> Array:
         return a * f - b * e + d * c
 
 
-def householder(x: jax.Array):
-    x0 = x[0]
-    sigma = jnp.vdot(x[1:], x[1:])
+def _householder(
+    x: jax.Array, n: Optional[int] = None
+) -> Tuple[jax.Array, jax.Array, jax.Array]:
+    if n is None:
+        n = 0
+        x0 = x[0]
+        x = x.at[0].set(0)
+    else:
+        x0 = x[n]
+        x = jnp.where(jnp.arange(x.size) <= n, 0, x)
+    
+    sigma = jnp.vdot(x, x)
     norm_x = jnp.sqrt(x0.conj() * x0 + sigma)
 
     phase = jnp.where(x0 == 0.0, 1.0, jnp.sign(x0))
     alpha = -phase * norm_x
 
-    v = x.at[0].subtract(alpha)
+    v = x.at[n].set(x0 - alpha)
     v *= jax.lax.rsqrt(jnp.vdot(v, v))
 
     cond = sigma == 0.0
@@ -63,10 +73,36 @@ def householder(x: jax.Array):
 
 
 @jax.custom_jvp
-def _slogpf_householder(A: Array) -> Tuple[Array, Array]:
+def _slogpf_householder(A: jax.Array) -> jax.Array:
+    n = A.shape[0]
+
+    def body_fun(i, val):
+        A, sign, log = val
+        v, tau, alpha = _householder(A[:, i], i + 1)
+        w = tau * A @ v.conj()
+        vw = jnp.outer(v, w)
+        A += vw - vw.T
+
+        new_val = (1 - tau) * jnp.where(i % 2 == 0, -alpha, 1.0)
+        sign *= jnp.sign(new_val)
+        log += jnp.log(jnp.abs(new_val))
+        return A, sign, log
+
+    sign = jnp.array(1, dtype=A.dtype)
+    log = jnp.array(0, dtype=jnp.finfo(A.dtype).dtype)
+    init_val = (A, sign, log)
+    A, sign, log = jax.lax.fori_loop(0, n - 2, body_fun, init_val)
+
+    sign *= jnp.sign(A[n - 2, n - 1])
+    log += jnp.log(jnp.abs(A[n - 2, n - 1]))
+    return sign, log
+
+
+@jax.custom_jvp
+def _slogpf_householder_for(A: Array) -> Tuple[Array, Array]:
     vals = []
     for i in range(A.shape[0] - 2):
-        v, tau, alpha = householder(A[1:, 0])
+        v, tau, alpha = _householder(A[1:, 0])
         A = A[1:, 1:]
         w = tau * A @ v.conj()
         vw = jnp.outer(v, w)
@@ -114,7 +150,14 @@ def slogpf(A: Array, *, method: str = "householder") -> SlogpfResult:
     else:
         batch = A.shape[:-2]
         A = A.reshape(-1, *A.shape[-2:])
-        slogpf_fn = _slogpf_householder if method == "householder" else _slogpf_schur
+
+        if method == "householder":
+            slogpf_fn = _slogpf_householder
+        elif method == "householder_for":
+            slogpf_fn = _slogpf_householder_for
+        else:
+            slogpf_fn = _slogpf_schur
+
         batched_fn = jax.vmap(slogpf_fn)
         outputs = batched_fn(A)
         return SlogpfResult(outputs[0].reshape(batch), outputs[1].reshape(batch))
@@ -140,9 +183,15 @@ def _slogpf_jvp(
 ) -> Tuple[Tuple[Array, Array], Tuple[Array, Array]]:
     (A,) = primals
     (dA,) = tangents
-    A = (A - A.T) / 2
+    A = _check_input(A, method)
 
-    slogpf_fn = _slogpf_householder if method == "householder" else _slogpf_schur
+    if method == "householder":
+        slogpf_fn = _slogpf_householder
+    elif method == "householder_for":
+        slogpf_fn = _slogpf_householder_for
+    else:
+        slogpf_fn = _slogpf_schur
+
     sign, ans = slogpf_fn(A)
     ans_dot = jnp.trace(jnp.linalg.solve(A, dA)) / 2
 
@@ -156,4 +205,5 @@ def _slogpf_jvp(
 
 
 _slogpf_householder.defjvp(partial(_slogpf_jvp, method="householder"))
+_slogpf_householder_for.defjvp(partial(_slogpf_jvp, method="householder_for"))
 _slogpf_schur.defjvp(partial(_slogpf_jvp, method="schur"))

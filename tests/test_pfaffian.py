@@ -57,11 +57,13 @@ def test_direct_pf(dtype):
     assert jnp.allclose(pfA1, pfA2)
 
 
-def test_schur():
+def test_methods():
     A = jr.normal(_get_key(), (10, 10), dtype=jnp.float64)
     A = A - A.T
     pf_householder = pf(A, method="householder")
+    pf_householder_for = pf(A, method="householder_for")
     pf_schur = pf(A, method="schur")
+    assert jnp.allclose(pf_householder, pf_householder_for)
     assert jnp.allclose(pf_householder, pf_schur)
 
 
