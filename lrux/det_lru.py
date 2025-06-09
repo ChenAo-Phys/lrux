@@ -1,10 +1,8 @@
-from typing import Optional, Tuple, Union, Sequence
+from typing import Optional, Tuple, Union, Sequence, NamedTuple
 from jax import Array
 from jax.typing import ArrayLike
-from jax.core import Tracer
 import jax
 import jax.numpy as jnp
-import jax.tree_util as jtu
 from jax._src.numpy import reductions
 
 
@@ -91,31 +89,10 @@ def det_lru(
         return ratio
 
 
-@jtu.register_pytree_node_class
-class DetCarrier:
-    """
-    The pytree carrying intermediate information for low-rank updates.
-    """
-
-    def __init__(self, Ainv: Array, a: Array, b: Array):
-        self.Ainv = Ainv
-        self.a = a
-        self.b = b
-
-    def tree_flatten(self) -> Tuple:
-        children = (self.Ainv, self.a, self.b)
-        aux_data = None
-        return (children, aux_data)
-
-    @classmethod
-    def tree_unflatten(cls, aux_data, children):
-        return cls(*children)
-
-    def __repr__(self):
-        return f"DetCarrier(Ainv: {self.Ainv}\na: {self.a}\nb: {self.b})"
-
-    def get_current_Ainv(self) -> Array:
-        return self.Ainv - jnp.einsum("tnk,tmk->nm", self.a, self.b)
+class DetCarrier(NamedTuple):
+    Ainv: Array
+    a: Array
+    b: Array
 
 
 def init_det_carrier(A: Array, max_delay: int, max_rank: int = 1) -> DetCarrier:
@@ -145,12 +122,11 @@ def _get_delayed_output(
     u: Tuple[Array, Array],
     v: Tuple[Array, Array],
     return_update: bool,
-    current_delay: Optional[int],
-    tau: int,
-) -> Tuple[Array, Array]:
+    current_delay: int,
+) -> Union[Array, Tuple[Array, Array]]:
     Ainv = carrier.Ainv
-    a = carrier.a[:tau]
-    b = carrier.b[:tau]
+    a = carrier.a[:current_delay]
+    b = carrier.b[:current_delay]
     R0 = _get_R(Ainv, u, v)
 
     xuT_a = jnp.einsum("nk,tnl->tkl", u[0], a)
@@ -173,7 +149,12 @@ def _get_delayed_output(
 
         a = _update_ab(carrier.a, new_a, current_delay)
         b = _update_ab(carrier.b, new_bT.T, current_delay)
-        carrier = DetCarrier(Ainv, a, b)
+
+        if current_delay == a.shape[0] - 1:
+            Ainv -= jnp.einsum("tnk,tmk->nm", a, b)
+            carrier = DetCarrier(Ainv, jnp.zeros_like(a), jnp.zeros_like(b))
+        else:
+            carrier = DetCarrier(Ainv, a, b)
         return ratio, carrier
     else:
         return ratio
@@ -189,37 +170,20 @@ def det_lru_delayed(
     """
     Low-rank update of determinant with delayed updates
     """
+    max_delay = carrier.a.shape[0]
+    if current_delay is None:
+        if return_update:
+            raise ValueError("`current_delay` must be specified to return updates.")
+        current_delay = max_delay - 1
+
+    elif current_delay < 0 or current_delay >= max_delay:
+        raise ValueError(
+            f"`current_delay` should be in range [0, {max_delay}), got {current_delay}."
+        )
+
     Ainv = carrier.Ainv
     u = _standardize_uv(u, Ainv.shape[0], Ainv.dtype)
     v = _standardize_uv(v, Ainv.shape[0], Ainv.dtype)
     _check_uv(u, v)
 
-    max_delay = carrier.a.shape[0]
-    if current_delay is None:
-        tau = max_delay
-    else:
-        if current_delay < 0 or current_delay >= max_delay:
-            raise ValueError(
-                f"`current_delay` should be in range [0, {max_delay}), got {current_delay}."
-            )
-        # slice a and b if current_delay is given
-        tau = current_delay
-
-    delayed_output = _get_delayed_output(
-        carrier, u, v, return_update, current_delay, tau
-    )
-
-    if return_update:
-        if current_delay is None:
-            raise ValueError("`current_delay` must be specified to return updates.")
-
-        ratio, carrier = delayed_output
-        if current_delay == max_delay - 1:
-            Ainv = carrier.get_current_Ainv()
-            a = jnp.zeros_like(carrier.a)
-            b = jnp.zeros_like(carrier.b)
-            carrier = DetCarrier(Ainv, a, b)
-
-        return ratio, carrier
-    else:
-        return delayed_output
+    return _get_delayed_output(carrier, u, v, return_update, current_delay)

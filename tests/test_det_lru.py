@@ -96,7 +96,20 @@ def test_vmap(dtype):
 
 
 @pytest.mark.parametrize("dtype", [jnp.float64, jnp.complex128])
-def test_det_lru_delayed(dtype):
+def test_single_delay(dtype):
+    n = 10
+    A = jr.normal(_get_key(), (n, n), dtype)
+    carrier = init_det_carrier(A, max_delay=n // 2)
+    u = jr.normal(_get_key(), (n,), dtype)
+    v = jr.normal(_get_key(), (n,), dtype)
+    A_ = A + jnp.outer(v, u)
+
+    ratio = det_lru_delayed(carrier, u, v)
+    assert jnp.allclose(ratio, jnp.linalg.det(A_) / jnp.linalg.det(A))
+
+
+@pytest.mark.parametrize("dtype", [jnp.float64, jnp.complex128])
+def test_multiple_delayed(dtype):
     n = 10
     max_delay = n // 2
     max_rank = 2
