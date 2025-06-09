@@ -97,7 +97,7 @@ class DetCarrier:
     The pytree carrying intermediate information for low-rank updates.
     """
 
-    def __init__(self, Ainv: Array, a: Optional[Array], b: Optional[Array]):
+    def __init__(self, Ainv: Array, a: Array, b: Array):
         self.Ainv = Ainv
         self.a = a
         self.b = b
@@ -115,10 +115,7 @@ class DetCarrier:
         return f"DetCarrier(Ainv: {self.Ainv}\na: {self.a}\nb: {self.b})"
 
     def get_current_Ainv(self) -> Array:
-        if self.a is None:
-            return self.Ainv
-        else:
-            return self.Ainv - jnp.einsum("tnk,tmk->nm", self.a, self.b)
+        return self.Ainv - jnp.einsum("tnk,tmk->nm", self.a, self.b)
 
 
 def init_det_carrier(A: Array, max_delay: int, max_rank: int = 1) -> DetCarrier:
@@ -140,7 +137,7 @@ def _update_ab(a: Array, new_a: Array, current_delay: int) -> Array:
         raise ValueError(
             "The rank of update exceeds max_rank specified in `init_det_carrier`."
         )
-    return a.at[current_delay % a.shape[0], :, :k].set(new_a)
+    return a.at[current_delay, :, :k].set(new_a)
 
 
 def _get_delayed_output(
@@ -182,26 +179,6 @@ def _get_delayed_output(
         return ratio
 
 
-def _push_Ainv_output(
-    carrier: DetCarrier,
-    u: Tuple[Array, Array],
-    v: Tuple[Array, Array],
-    current_delay: int,
-) -> Tuple[Array, Array]:
-    Ainv = carrier.get_current_Ainv()
-    R = _get_R(Ainv, u, v)
-    ratio, lufac = _det_and_lufac(R)
-
-    new_a = jnp.concatenate((Ainv[:, v[1]], Ainv @ v[0]), axis=1)
-    new_bT = jnp.concatenate((u[0].T @ Ainv, Ainv[u[1], :]), axis=0)
-    new_bT = jax.scipy.linalg.lu_solve(lufac, new_bT)
-    zeros = jnp.zeros_like(carrier.a)
-    a = _update_ab(zeros, new_a, current_delay)
-    b = _update_ab(zeros, new_bT.T, current_delay)
-    carrier = DetCarrier(Ainv, a, b)
-    return ratio, carrier
-
-
 def det_lru_delayed(
     carrier: DetCarrier,
     u: Union[int, Array, Tuple[Array, Array]],
@@ -218,21 +195,31 @@ def det_lru_delayed(
     _check_uv(u, v)
 
     max_delay = carrier.a.shape[0]
-    if isinstance(current_delay, Tracer) or current_delay is None:
+    if current_delay is None:
         tau = max_delay
     else:
-        # slice a and b if current_delay is static_arg
-        tau = current_delay % max_delay
+        if current_delay < 0 or current_delay >= max_delay:
+            raise ValueError(
+                f"`current_delay` should be in range [0, {max_delay}), got {current_delay}."
+            )
+        # slice a and b if current_delay is given
+        tau = current_delay
+
+    delayed_output = _get_delayed_output(
+        carrier, u, v, return_update, current_delay, tau
+    )
 
     if return_update:
         if current_delay is None:
             raise ValueError("`current_delay` must be specified to return updates.")
 
-        cond1 = current_delay % max_delay == 0
-        cond2 = current_delay > 0
-        is_pushing_Ainv = jnp.logical_and(cond1, cond2)
-        args = (carrier, u, v, current_delay)
-        delayed_output = lambda c, u, v, i: _get_delayed_output(c, u, v, True, i, tau)
-        return jax.lax.cond(is_pushing_Ainv, _push_Ainv_output, delayed_output, *args)
+        ratio, carrier = delayed_output
+        if current_delay == max_delay - 1:
+            Ainv = carrier.get_current_Ainv()
+            a = jnp.zeros_like(carrier.a)
+            b = jnp.zeros_like(carrier.b)
+            carrier = DetCarrier(Ainv, a, b)
+
+        return ratio, carrier
     else:
-        return _get_delayed_output(carrier, u, v, False, current_delay, tau)
+        return delayed_output

@@ -65,7 +65,7 @@ def test_rank_k(n, kxu, keu, kxv, kev, dtype):
     eu = jr.randint(_get_key(), keu, 0, n)
     xv = jr.normal(_get_key(), (n, kxv), dtype)
     ev = jr.randint(_get_key(), kev, 0, n)
-    
+
     eu_arr = jnp.zeros((n, keu), dtype).at[eu, jnp.arange(keu)].set(1)
     u_full = jnp.concatenate((xu, eu_arr), axis=1)
     ev_arr = jnp.zeros((n, kev), dtype).at[ev, jnp.arange(kev)].set(1)
@@ -85,7 +85,7 @@ def test_vmap(dtype):
     A = jr.normal(_get_key(), (batch, n, n), dtype)
     Ainv = jnp.linalg.inv(A)
     detA = jnp.linalg.det(A)
-    
+
     u = jr.normal(_get_key(), (batch, n, k), dtype)
     v = jr.normal(_get_key(), (batch, n, k), dtype)
     A_ = A + jnp.einsum("bnk,bmk->bnm", v, u)
@@ -95,18 +95,19 @@ def test_vmap(dtype):
     assert jnp.allclose(new_inv, jnp.linalg.inv(A_))
 
 
-@pytest.mark.parametrize("static_argnums", [(3, 4), (3,)])
 @pytest.mark.parametrize("dtype", [jnp.float64, jnp.complex128])
-def test_det_lru_delayed(static_argnums, dtype):
+def test_det_lru_delayed(dtype):
     n = 10
+    max_delay = n // 2
     max_rank = 2
     A = jr.normal(_get_key(), (n, n), dtype)
     carrier = init_det_carrier(A, max_delay=n // 2, max_rank=max_rank)
     detA0 = jnp.linalg.det(A)
 
-    lru_fn = jax.jit(det_lru_delayed, static_argnums=static_argnums, donate_argnums=0)
+    lru_fn = jax.jit(det_lru_delayed, static_argnums=(3, 4), donate_argnums=0)
 
-    for current_delay in range(20):
+    for i in range(20):
+        current_delay = i % max_delay
         k = random.randint(0, max_rank)
         u = jr.normal(_get_key(), (n, k), dtype)
         v = jr.normal(_get_key(), (n, k), dtype)
