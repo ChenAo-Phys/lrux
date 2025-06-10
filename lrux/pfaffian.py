@@ -1,4 +1,4 @@
-from typing import Tuple, NamedTuple, Optional
+from typing import Tuple, NamedTuple, Optional, Callable
 from jax import Array
 from functools import partial
 import jax
@@ -14,24 +14,6 @@ def skew_eye(n: int, dtype: jnp.dtype = jnp.float32) -> Array:
     I = jnp.eye(n, dtype=dtype)
     O = jnp.zeros((n, n), dtype=dtype)
     return jnp.block([[O, I], [-I, O]])
-
-
-def _check_input(A: Array, method: str) -> None:
-    if A.ndim < 2 or A.shape[-2] != A.shape[-1]:
-        raise ValueError(
-            f"The expected input is a square matrix or a batch of them, got input shape {A.shape}."
-        )
-
-    if method not in ("householder", "householder_for", "schur"):
-        raise ValueError(
-            f"Unknown pfaffian method '{method}'. "
-            "Supported methods include 'householder', 'householder_for' and 'schur'."
-        )
-
-    if method == "schur" and jnp.issubdtype(A, jnp.complexfloating):
-        raise ValueError("The schur method is only available for real dtypes.")
-
-    return (A - jnp.swapaxes(A, -2, -1)) / 2
 
 
 def _pfaffian_direct(A: Array) -> Array:
@@ -55,9 +37,7 @@ def _pfaffian_direct(A: Array) -> Array:
         return a * f - b * e + d * c
 
 
-def _householder(
-    x: jax.Array, n: Optional[int] = None
-) -> Tuple[jax.Array, jax.Array, jax.Array]:
+def _householder(x: Array, n: Optional[int] = None) -> Tuple[Array, Array, Array]:
     if n is None:
         n = 0
         x0 = x[0]
@@ -65,7 +45,7 @@ def _householder(
     else:
         x0 = x[n]
         x = jnp.where(jnp.arange(x.size) <= n, 0, x)
-    
+
     sigma = jnp.vdot(x, x)
     norm_x = jnp.sqrt(x0.conj() * x0 + sigma)
 
@@ -84,7 +64,7 @@ def _householder(
 
 
 @jax.custom_jvp
-def _slogpf_householder(A: jax.Array) -> jax.Array:
+def _slogpf_householder(A: Array) -> Array:
     n = A.shape[0]
 
     def body_fun(i, val):
@@ -142,6 +122,32 @@ def _slogpf_schur(A: Array) -> Tuple[Array, Array]:
     return sign, log
 
 
+def _check_input(
+    A: Array, method: str
+) -> Tuple[Array, Callable[[Array], Tuple[Array, Array]]]:
+    if A.ndim < 2 or A.shape[-2] != A.shape[-1]:
+        raise ValueError(
+            f"The expected input is a square matrix or a batch of them, got input shape {A.shape}."
+        )
+    A = (A - jnp.swapaxes(A, -2, -1)) / 2
+
+    if method == "householder":
+        slogpf_fn = _slogpf_householder
+    elif method == "householder_for":
+        slogpf_fn = _slogpf_householder_for
+    elif method == "schur":
+        if jnp.issubdtype(A, jnp.complexfloating):
+            raise ValueError("The schur method is only available for real dtypes.")
+        slogpf_fn = _slogpf_schur
+    else:
+        raise ValueError(
+            f"Unknown pfaffian method '{method}'. "
+            "Supported methods include 'householder', 'householder_for' and 'schur'."
+        )
+
+    return A, slogpf_fn
+
+
 class SlogpfResult(NamedTuple):
     sign: Array
     logabspf: Array
@@ -152,7 +158,7 @@ def slogpf(A: Array, *, method: str = "householder") -> SlogpfResult:
     """
     Return the log of pfaffian. A customized vjp is used for faster gradients.
     """
-    A = _check_input(A, method)
+    A, slogpf_fn = _check_input(A, method)
 
     n = A.shape[-1]
     if n <= 4 or n % 2 == 1:
@@ -162,15 +168,7 @@ def slogpf(A: Array, *, method: str = "householder") -> SlogpfResult:
         batch = A.shape[:-2]
         A = A.reshape(-1, *A.shape[-2:])
 
-        if method == "householder":
-            slogpf_fn = _slogpf_householder
-        elif method == "householder_for":
-            slogpf_fn = _slogpf_householder_for
-        else:
-            slogpf_fn = _slogpf_schur
-
-        batched_fn = jax.vmap(slogpf_fn)
-        outputs = batched_fn(A)
+        outputs = jax.vmap(slogpf_fn)(A)
         return SlogpfResult(outputs[0].reshape(batch), outputs[1].reshape(batch))
 
 
@@ -179,14 +177,18 @@ def pf(A: Array, *, method: str = "householder") -> Array:
     """
     Return pfaffian of the input matrix A. A customized vjp is used for faster gradients.
     """
-    A = _check_input(A, method)
+    A, slogpf_fn = _check_input(A, method)
 
     n = A.shape[-1]
     if n <= 4 or n % 2 == 1:
         return _pfaffian_direct(A)
     else:
-        sign, log = slogpf(A, method=method)
-        return sign * jnp.exp(log)
+        batch = A.shape[:-2]
+        A = A.reshape(-1, *A.shape[-2:])
+
+        sign, log = jax.vmap(slogpf_fn)(A)
+        pfA = sign * jnp.exp(log)
+        return pfA.reshape(batch)
 
 
 def _slogpf_jvp(
@@ -194,14 +196,7 @@ def _slogpf_jvp(
 ) -> Tuple[Tuple[Array, Array], Tuple[Array, Array]]:
     (A,) = primals
     (dA,) = tangents
-    A = _check_input(A, method)
-
-    if method == "householder":
-        slogpf_fn = _slogpf_householder
-    elif method == "householder_for":
-        slogpf_fn = _slogpf_householder_for
-    else:
-        slogpf_fn = _slogpf_schur
+    A, slogpf_fn = _check_input(A, method)
 
     sign, ans = slogpf_fn(A)
     ans_dot = jnp.trace(jnp.linalg.solve(A, dA)) / 2
