@@ -166,7 +166,7 @@ def slogpf(A: Array, *, method: str = "householder") -> SlogpfResult:
         return SlogpfResult(jnp.sign(pfA), jnp.log(jnp.abs(pfA)))
     else:
         batch = A.shape[:-2]
-        A = A.reshape(-1, *A.shape[-2:])
+        A = A.reshape(-1, n, n)
 
         outputs = jax.vmap(slogpf_fn)(A)
         return SlogpfResult(outputs[0].reshape(batch), outputs[1].reshape(batch))
@@ -184,7 +184,7 @@ def pf(A: Array, *, method: str = "householder") -> Array:
         return _pfaffian_direct(A)
     else:
         batch = A.shape[:-2]
-        A = A.reshape(-1, *A.shape[-2:])
+        A = A.reshape(-1, n, n)
 
         sign, log = jax.vmap(slogpf_fn)(A)
         pfA = sign * jnp.exp(log)

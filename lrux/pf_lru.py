@@ -19,7 +19,7 @@ def _get_R(Ainv: Array, u: Tuple[Array, Array]) -> Array:
     uT_Ainv_u = jnp.block([[xu_Ainv_xu, xu_Ainv_eu], [-xu_Ainv_eu.T, eu_Ainv_eu]])
     J = skew_eye(uT_Ainv_u.shape[0] // 2, Ainv.dtype)
     R = uT_Ainv_u + J
-    return (R - R.T) / 2
+    return (R - R.T) / 2  # ensure skew-symmetric
 
 
 def _update_Ainv(Ainv: Array, u: Tuple[Array, Array], R: Array) -> Array:
@@ -79,14 +79,17 @@ def init_pf_carrier(A: Array, max_delay: int, max_rank: int = 2) -> PfCarrier:
     return PfCarrier(Ainv, a, Rinv)
 
 
-def _get_delayed_updates(a: Array, Rinv: Array) -> Array:
+def _get_delayed_updates(Ainv: Array, a: Array, Rinv: Array) -> Array:
     if Rinv.shape[-1] == 2:
         a1 = a[:, :, 0]
         a2 = a[:, :, 1]
         outer = jnp.einsum("tn,t,tm->nm", a1, Rinv[:, 0, 1], a2)
-        return outer - outer.T
+        update = outer - outer.T
     else:
-        return jnp.einsum("tnj,tjk,tmk->nm", a, Rinv, a)
+        update = jnp.einsum("tnj,tjk,tmk->nm", a, Rinv, a)
+
+    Ainv += update
+    return (Ainv - Ainv.T) / 2  # ensure skew-symmetric
 
 
 def _get_delayed_output(
@@ -119,10 +122,11 @@ def _get_delayed_output(
             new_Rinv = jnp.array([[0, rinv], [-rinv, 0]], dtype=Rinv.dtype)
         else:
             new_Rinv = jnp.linalg.inv(R)
+            new_Rinv = (new_Rinv - new_Rinv.T) / 2  # ensure skew-symmetric
         Rinv = carrier.Rinv.at[current_delay, :k, :k].set(new_Rinv)
 
         if current_delay == a.shape[0] - 1:
-            Ainv += _get_delayed_updates(a, Rinv)
+            Ainv = _get_delayed_updates(Ainv, a, Rinv)
             carrier = PfCarrier(Ainv, jnp.zeros_like(a), jnp.zeros_like(Rinv))
         else:
             carrier = PfCarrier(Ainv, a, Rinv)
