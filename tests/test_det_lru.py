@@ -114,7 +114,7 @@ def test_multiple_delayed(dtype):
     max_delay = n // 2
     max_rank = 2
     A = jr.normal(_get_key(), (n, n), dtype)
-    carrier = init_det_carrier(A, max_delay=n // 2, max_rank=max_rank)
+    carrier = init_det_carrier(A, max_delay, max_rank)
     detA0 = jnp.linalg.det(A)
 
     lru_fn = jax.jit(det_lru_delayed, static_argnums=(3, 4), donate_argnums=0)
@@ -127,6 +127,5 @@ def test_multiple_delayed(dtype):
         ratio, carrier = lru_fn(carrier, u, v, True, current_delay)
         A += v @ u.T
         detA1 = jnp.linalg.det(A)
-        print(current_delay, k, ratio, detA1 / detA0)
         assert jnp.allclose(ratio, detA1 / detA0)
         detA0 = detA1

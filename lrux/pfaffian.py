@@ -5,6 +5,17 @@ import jax
 import jax.numpy as jnp
 
 
+def skew_eye(n: int, dtype: jnp.dtype = jnp.float32) -> Array:
+    """
+    Return the skew-symmetric identity matrix of shape (2n, 2n).
+    The matrix is defined as:
+    J = [[0, I], [-I, 0]]
+    """
+    I = jnp.eye(n, dtype=dtype)
+    O = jnp.zeros((n, n), dtype=dtype)
+    return jnp.block([[O, I], [-I, O]])
+
+
 def _check_input(A: Array, method: str) -> None:
     if A.ndim < 2 or A.shape[-2] != A.shape[-1]:
         raise ValueError(

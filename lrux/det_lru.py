@@ -21,7 +21,7 @@ def _standardize_uv(
         else:
             u = (u.reshape(n, -1), jnp.array([], dtype=jnp.int32))
     elif isinstance(u, Sequence):
-        u = tuple(u)
+        u = (jnp.asarray(u[0]).reshape(n, -1), jnp.asarray(u[1]).flatten())
     else:
         raise ValueError(f"Got unsupported u or v data type {type(u)}.")
     return u
