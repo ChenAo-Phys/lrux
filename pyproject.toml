@@ -10,7 +10,7 @@ authors = [
     { name = "Ao Chen", email = "chenao.phys@gmail.com" },
     { name = "Christopher Roth", email = "christopher_roth@utexas.edu" }
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.8"
 dependencies = [
     "jax>=0.4.4"
 ]
