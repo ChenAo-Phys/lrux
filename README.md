@@ -1,8 +1,8 @@
 <h1 align='center'>lrux</h1>
 
-<span style="font-size:24px">
-Fast low-rank update (LRU) of matrix determinants and pfaffians in </span><span style="font-size:24px"><a href="https://github.com/jax-ml/jax">JAX</a></span>
+Fast low-rank update (LRU) of matrix determinants and pfaffians in [JAX](https://github.com/jax-ml/jax)
 
+[📖 Documentation](https://chenao-phys.github.io/lrux/)
 
 ## What's low-rank update?
 

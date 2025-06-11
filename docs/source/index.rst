@@ -8,14 +8,38 @@ lrux documentation
 
 Fast low-rank update (LRU) of matrix determinants and pfaffians in JAX
 
+.. currentmodule:: lrux
 
-.. toctree::
-   :maxdepth: 1
 
-   installation
+Low-rank update of determinants
+-------------------------------
 
-.. toctree::
-   :maxdepth: 2
-   
-   api
+.. autosummary::
+   :toctree:
 
+   det_lru
+   init_det_carrier
+   det_lru_delayed
+
+
+Low-rank update of pfaffians
+-------------------------------
+
+.. autosummary::
+   :toctree:
+
+   pf_lru
+   init_pf_carrier
+   pf_lru_delayed
+
+    
+
+Pfaffian functions
+-------------------------------
+
+.. autosummary::
+   :toctree:
+
+   skew_eye
+   pf
+   slogpf

@@ -11,10 +11,10 @@ import sys
 
 sys.path.insert(0, pathlib.Path(__file__).parents[2].resolve().as_posix())
 
-project = 'lrux'
-copyright = '2025, Ao Chen, Christopher Roth'
-author = 'Ao Chen, Christopher Roth'
-release = '0.1.0'
+project = "lrux"
+copyright = "2025, Ao Chen, Christopher Roth"
+author = "Ao Chen, Christopher Roth"
+release = "0.1.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -33,6 +33,17 @@ default_role = "py:obj"
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "pydata_sphinx_theme"
-#html_static_path = ["_static"]
+# html_static_path = ["_static"]
 html_use_relative_urls = True
-html_baseurl = 'https://chenao-phys.github.io/lrux/'
+html_baseurl = "https://chenao-phys.github.io/lrux/"
+
+html_theme_options = {
+    "external_links": [],
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/ChenAo-Phys/lrux/tree/main",
+            "icon": "fab fa-github",  # FontAwesome icon
+        },
+    ],
+}
