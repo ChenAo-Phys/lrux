@@ -6,9 +6,9 @@ Fast low-rank update (LRU) of matrix determinants and pfaffians in [JAX](https:/
 
 ## What's low-rank update?
 
-Consider two $n \times n$ matrices $\mathbf{A}_0$ and $\mathbf{A}_1$ whose matrix elements are identical except for one row. In quantum physics and many other fields, it often happens that we have computed $\det(\mathbf{A}_0)$ and need to compute $\det(\mathbf{A}_1)$. As $\mathbf{A}_0$ and $\mathbf{A}_1$ are very similar, we can well expect that $\det(\mathbf{A}_1)$ doesn't have to be recomputed from scratch.
+In quantum physics and many other fields, it often happens that we have computed $\det(\mathbf{A}_0)$ and need to compute $\det(\mathbf{A}_1)$, where $\mathbf{A}_0$ and $\mathbf{A}_1$ are nearly identical. Due to the similarity of $\mathbf{A}_0$ and $\mathbf{A}_1$, we can well expect that in many cases $\det(\mathbf{A}_1)$ doesn't have to be recomputed from scratch.
 
-Indeed, we can express the difference between $\mathbf{A}_1$ and $\mathbf{A}_0$ as
+Consider a special case that $\mathbf{A}_0$ and $\mathbf{A}_1$ are only different by one row. We can express their difference as
 <!-- $$
     \mathbf{A}_1 - \mathbf{A}_0 = \begin{pmatrix}
         0 & ... & 0 \\ 
@@ -38,7 +38,7 @@ $$ -->
   <img src="./images/detA1.svg"/>
 </div>
 
-If $\mathbf{A}_0^{-1}$ has been computed and stored earlier, one can immediately obtain $\det(\mathbf{A}_1)$ with $\mathcal{O}(n^2)$ complexity for any general $\mathbf{u}$ and $\mathbf{v}$ instead of the original determinant complexity $\mathcal{O}(n^3)$. The following code shows how this is done with lrux, where `lrux.det_lru` returns the ratio 
+If $\mathbf{A}_0^{-1}$ and $\det(\mathbf{A}_0)$ has been computed and stored earlier, one can immediately obtain $\det(\mathbf{A}_1)$ with $\mathcal{O}(n^2)$ complexity for any general $\mathbf{u}$ and $\mathbf{v}$, instead of the original determinant complexity $\mathcal{O}(n^3)$. The following code shows how this is done with lrux, where `lrux.det_lru` returns the ratio 
 <!-- $$
 r = \frac{\det(\mathbf{A}_1)}{\det (\mathbf{A}_0)} = 1 + \mathbf{u}^T \mathbf{A}_0^{-1} \mathbf{v}.
 $$ -->
