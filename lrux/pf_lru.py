@@ -287,8 +287,7 @@ def pf_lru_delayed(
     current_delay: Optional[int] = None,
 ) -> Union[Array, Tuple[Array, PfCarrier]]:
     r"""
-    Delayed low-rank update of pfaffian. Only recommended for heavy users who
-    understand why and when to use delayed updates.
+    Delayed low-rank update of pfaffian
 
     :param carrier:
         The existing delayed update quantities, including :math:`A_0^{-1}`, and :math:`a_t`
@@ -342,6 +341,11 @@ def pf_lru_delayed(
 
             The ``Ainv`` in ``new_carrier`` will be replaced by :math:`A_\tau^{-1}`, and
             ``a`` and ``Rinv`` will be set to 0.
+
+    .. warning::
+
+        This function is only recommended for heavy users who understand why and when 
+        to use delayed updates. Otherwise, please choose `~\lrux.pf_lru`.
 
     .. tip::
 

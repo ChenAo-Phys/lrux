@@ -408,8 +408,7 @@ def det_lru_delayed(
     current_delay: Optional[int] = None,
 ) -> Union[Array, Tuple[Array, DetCarrier]]:
     r"""
-    Delayed low-rank update of determinant. Only recommended for heavy users who
-    understand why and when to use delayed updates.
+    Delayed low-rank update of determinant
 
     :param carrier:
         The existing delayed update quantities, including :math:`A_0^{-1}`, and :math:`a_t`
@@ -472,6 +471,11 @@ def det_lru_delayed(
 
             The ``Ainv`` in ``new_carrier`` will be replaced by :math:`A_\tau^{-1}`, and
             ``a`` and ``b`` will be set to 0.
+
+    .. warning::
+
+        This function is only recommended for heavy users who understand why and when 
+        to use delayed updates. Otherwise, please choose `~\lrux.det_lru`.
 
     .. tip::
 
