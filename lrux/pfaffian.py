@@ -205,11 +205,11 @@ def slogpf(A: Array, *, method: str = "householder") -> SlogpfResult:
     
     .. tip::
 
-        The input A is always be skew-symmetrized.
+        The input A is always skew-symmetrized.
 
     .. tip::
 
-        This function is backward compatible for both real and complex dtypes.
+        This function has ``jax.custom_jvp`` defined and is backward compatible for both real and complex dtypes.
     """
     A, slogpf_fn = _check_input(A, method)
 
@@ -260,7 +260,7 @@ def pf(A: Array, *, method: str = "householder") -> Array:
 
     .. tip::
 
-        This function is backward compatible for both real and complex dtypes.
+        This function has ``jax.custom_jvp`` defined and is backward compatible for both real and complex dtypes.
     """
     A, slogpf_fn = _check_input(A, method)
 

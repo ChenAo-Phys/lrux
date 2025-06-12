@@ -1,4 +1,5 @@
 from typing import Optional, Tuple, Union, NamedTuple
+from jax.typing import ArrayLike
 from jax import Array
 import jax
 import jax.numpy as jnp
@@ -36,7 +37,7 @@ def _update_Ainv(Ainv: Array, u: Tuple[Array, Array], R: Array) -> Array:
 
 def pf_lru(
     Ainv: Array,
-    u: Union[Array, Tuple[Array, Array]],
+    u: Union[ArrayLike, Tuple[Array, ArrayLike]],
     return_update: bool = False,
 ) -> Union[Array, Tuple[Array, Array]]:
     r"""
@@ -100,7 +101,13 @@ def pf_lru(
 
     .. note::
 
-        Here are examples of how to define ``u`` before calling ``pf_lru(Ainv, u)``
+        Here are examples of how to define ``u`` before calling ``pf_lru(Ainv, u)``.
+        Keep in mind that the low-rank update we need should be skew-symmetric and takes
+        the form
+
+        .. math::
+
+            A_1 - A_0 = -u J u^T
 
         **Update of 1 row and 1 column**
 
@@ -195,8 +202,7 @@ def init_pf_carrier(A: Array, max_delay: int, max_rank: int = 2) -> PfCarrier:
         The initial skew-symmetric matrix :math:`A_0` with shape (n, n).
 
     :param max_delay:
-        The maximum iterations T of delayed updates, usually chosen in the range
-        [n/10, n/2].
+        The maximum iterations T of delayed updates, usually chosen to be ~n/10.
 
     :param max_rank:
         The maximum rank K in delayed updates, default to 2.
@@ -282,7 +288,7 @@ def _get_delayed_output(
 
 def pf_lru_delayed(
     carrier: PfCarrier,
-    u: Union[int, Array, Tuple[Array, Array]],
+    u: Union[ArrayLike, Tuple[Array, ArrayLike]],
     return_update: bool = False,
     current_delay: Optional[int] = None,
 ) -> Union[Array, Tuple[Array, PfCarrier]]:
@@ -290,8 +296,13 @@ def pf_lru_delayed(
     Delayed low-rank update of pfaffian
 
     :param carrier:
-        The existing delayed update quantities, including :math:`A_0^{-1}`, and :math:`a_t`
-        and :math:`R_t^{-1}` with :math:`t` from 1 to :math:`\tau-1`.
+        The existing delayed update quantities, including :math:`A_0^{-1}`, :math:`R_t^{-1}`, and
+
+        .. math::
+
+            a_t = A_{t-1}^{-1} u_t
+
+        with :math:`t` from 1 to :math:`\tau-1`.
         Initially provided by `~lrux.init_pf_carrier`.
 
     :param u:
@@ -328,7 +339,7 @@ def pf_lru_delayed(
 
             .. math::
 
-                a_\tau = A_0^{-1} u_\tau + \sum_{t=1}^{\tau-1} a_t R_t^{-1} (a_t^T u_\tau)
+                a_\tau = A_{\tau-1}^{-1} u_\tau = A_0^{-1} u_\tau + \sum_{t=1}^{\tau-1} a_t R_t^{-1} (a_t^T u_\tau)
 
             When :math:`\tau` reaches the maximum delayed iterations :math:`T`
             specified in `~lrux.init_pf_carrier`, i.e. ``current_delay == max_delay - 1``,

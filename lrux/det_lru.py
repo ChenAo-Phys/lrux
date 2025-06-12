@@ -12,7 +12,7 @@ def _check_mat(mat: Array) -> None:
 
 
 def _standardize_uv(
-    u: Union[int, Array], n: int, dtype: jnp.dtype
+    u: Union[ArrayLike, Tuple[Array, ArrayLike]], n: int, dtype: jnp.dtype
 ) -> Tuple[Array, Array]:
     if isinstance(u, ArrayLike):
         u = jnp.asarray(u)
@@ -27,7 +27,7 @@ def _standardize_uv(
     return u
 
 
-def _check_uv(u: Union[int, Array], v: Union[int, Array]) -> None:
+def _check_uv(u: Tuple[Array, Array], v: Tuple[Array, Array]) -> None:
     rank_u = u[0].shape[1] + u[1].size
     rank_v = v[0].shape[1] + v[1].size
     if rank_u != rank_v:
@@ -68,8 +68,8 @@ def _update_Ainv(
 
 def det_lru(
     Ainv: Array,
-    u: Union[int, Array, Tuple[Array, Array]],
-    v: Union[int, Array, Tuple[Array, Array]],
+    u: Union[ArrayLike, Tuple[Array, ArrayLike]],
+    v: Union[ArrayLike, Tuple[Array, ArrayLike]],
     return_update: bool = False,
 ) -> Union[Array, Tuple[Array, Array]]:
     r"""
@@ -83,7 +83,7 @@ def det_lru(
         of ``u`` as listed below.
 
         An array with shape (n,) or (n, k):
-            Direct expression of full low-rank matrix.
+            Direct expression of full low-rank vector(s).
 
         An integer or array of integers with size k:
             One-hot vectors ``u_full = jnp.zeros((n, k)).at[u, jnp.arange(k)].set(1)``.
@@ -203,7 +203,12 @@ def det_lru(
 
     .. note::
 
-        Here are examples of how to define ``u`` and ``v`` before calling ``det_lru(Ainv, u, v)``
+        Here are examples of how to define ``u`` and ``v`` before calling ``det_lru(Ainv, u, v)``.
+        Keep in mind that the low-rank update we need takes the form
+
+        .. math::
+
+            A_1 - A_0 = vu^T
 
         **Rank-1 row update**
 
@@ -319,8 +324,7 @@ def init_det_carrier(A: Array, max_delay: int, max_rank: int = 1) -> DetCarrier:
         The initial matrix :math:`A_0` with shape (n, n).
 
     :param max_delay:
-        The maximum iterations T of delayed updates, usually chosen in the range
-        [n/10, n/2].
+        The maximum iterations T of delayed updates, usually chosen to be ~n/10.
 
     :param max_rank:
         The maximum rank K in delayed updates, default to 1.
@@ -402,8 +406,8 @@ def _get_delayed_output(
 
 def det_lru_delayed(
     carrier: DetCarrier,
-    u: Union[int, Array, Tuple[Array, Array]],
-    v: Union[int, Array, Tuple[Array, Array]],
+    u: Union[ArrayLike, Tuple[Array, ArrayLike]],
+    v: Union[ArrayLike, Tuple[Array, ArrayLike]],
     return_update: bool = False,
     current_delay: Optional[int] = None,
 ) -> Union[Array, Tuple[Array, DetCarrier]]:
@@ -411,8 +415,17 @@ def det_lru_delayed(
     Delayed low-rank update of determinant
 
     :param carrier:
-        The existing delayed update quantities, including :math:`A_0^{-1}`, and :math:`a_t`
-        and :math:`b_t` with :math:`t` from 1 to :math:`\tau-1`. 
+        The existing delayed update quantities, including :math:`A_0^{-1}`, and
+
+        .. math::
+
+            a_t = A_{t-1}^{-1} v_t
+
+        .. math::
+
+            b_t = (A_{t-1}^{-1})^T u_t
+
+        with :math:`t` from 1 to :math:`\tau-1`. 
         Initially provided by `~lrux.init_det_carrier`.
 
     :param u:
@@ -454,11 +467,11 @@ def det_lru_delayed(
 
             .. math::
 
-                a_\tau = A_0^{-1} v_\tau - \sum_{t=1}^{\tau-1} a_t (b_t^T v_\tau)
+                a_\tau = A_{\tau-1}^{-1} v_\tau = A_0^{-1} v_\tau - \sum_{t=1}^{\tau-1} a_t (b_t^T v_\tau)
 
             .. math::
 
-                b_\tau = (A_0^{-1})^T u_\tau - \sum_{t=1}^{\tau-1} b_t (a_t^T u_\tau)
+                b_\tau = (A_{\tau-1}^{-1})^T u_\tau = (A_0^{-1})^T u_\tau - \sum_{t=1}^{\tau-1} b_t (a_t^T u_\tau)
 
             When :math:`\tau` reaches the maximum delayed iterations :math:`T`
             specified in `~lrux.init_det_carrier`, i.e. ``current_delay == max_delay - 1``, 
