@@ -7,7 +7,7 @@ import jax.numpy as jnp
 
 def skew_eye(n: int, dtype: Optional[jnp.dtype] = None) -> Array:
     r"""
-    The skew-symmetric identity matrix
+    The skew-symmetric identity matrix :math:`J`.
 
     :param n:
         Number of rows in the output divided by 2.
@@ -185,7 +185,7 @@ def slogpf(A: Array, *, method: str = "householder") -> SlogpfResult:
             Houserholder transformation, internally using jitted python for loops
             to reduce the running time at a cost of much longer compiling time;
 
-        ``"schur""``:
+        ``"schur"``:
             Schur decomposition using 
             `jax.scipy.linalg.schur <https://docs.jax.dev/en/latest/_autosummary/jax.scipy.linalg.schur.html>`_,
             but only available on CPU and real dtypes.
@@ -228,7 +228,7 @@ def slogpf(A: Array, *, method: str = "householder") -> SlogpfResult:
 @partial(jax.jit, static_argnames=("method",))
 def pf(A: Array, *, method: str = "householder") -> Array:
     """
-    Compute the pfaffian of an array
+    Compute the pfaffian of an array.
 
     :param A:
         An array with shape (..., n, n)
@@ -244,7 +244,7 @@ def pf(A: Array, *, method: str = "householder") -> Array:
             Houserholder transformation, internally using jitted python for loops
             to reduce the running time at a cost of much longer compiling time;
 
-        ``"schur""``:
+        ``"schur"``:
             Schur decomposition using 
             `jax.scipy.linalg.schur <https://docs.jax.dev/en/latest/_autosummary/jax.scipy.linalg.schur.html>`_,
             but only available on CPU and real dtypes.

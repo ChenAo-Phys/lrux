@@ -1,9 +1,8 @@
 from typing import Optional, Tuple, Union, NamedTuple
-from jax.typing import ArrayLike
 from jax import Array
 import jax
 import jax.numpy as jnp
-from .det_lru import _standardize_uv, _update_ab
+from .det_lru import _LowRankVecInput, _standardize_uv, _update_ab
 from .pfaffian import skew_eye, pf
 
 
@@ -37,12 +36,12 @@ def _update_Ainv(Ainv: Array, u: Tuple[Array, Array], R: Array) -> Array:
 
 def pf_lru(
     Ainv: Array,
-    u: Union[ArrayLike, Tuple[Array, ArrayLike]],
+    u: _LowRankVecInput,
     return_update: bool = False,
 ) -> Union[Array, Tuple[Array, Array]]:
     r"""
     Low-rank update of pfaffian :math:`\mathrm{pf}(A_1) = \mathrm{pf}(A_0 - u J u^T)`.
-    Here :math:`J` is the skew-symmetric identity matrix
+    Here :math:`J` is the skew-symmetric identity matrix.
         
     .. math::
 
@@ -196,7 +195,7 @@ class PfCarrier(NamedTuple):
 
 def init_pf_carrier(A: Array, max_delay: int, max_rank: int = 2) -> PfCarrier:
     r"""
-    Prepare the data and space for `~lrux.pf_lru_delayed`
+    Prepare the data and space for `~lrux.pf_lru_delayed`.
 
     :param A:
         The initial skew-symmetric matrix :math:`A_0` with shape (n, n).
@@ -288,12 +287,12 @@ def _get_delayed_output(
 
 def pf_lru_delayed(
     carrier: PfCarrier,
-    u: Union[ArrayLike, Tuple[Array, ArrayLike]],
+    u: _LowRankVecInput,
     return_update: bool = False,
     current_delay: Optional[int] = None,
 ) -> Union[Array, Tuple[Array, PfCarrier]]:
     r"""
-    Delayed low-rank update of pfaffian
+    Delayed low-rank update of pfaffian.
 
     :param carrier:
         The existing delayed update quantities, including :math:`A_0^{-1}`, :math:`R_t^{-1}`, and
@@ -315,9 +314,10 @@ def pf_lru_delayed(
         defaul to False.
 
     :param current_delay:
-        The current iterations :math:`\tau` of delayed updates. As python starts counting
-        from 0, the actual :math:`\tau` should be ``current_delay + 1``.
-        It must be specified when ``return_update`` is True.
+        The current iterations :math:`\tau` of delayed updates,
+        must be specified when ``return_update`` is True.
+        As python starts counting at 0, the actual :math:`\tau` value is given by 
+        ``current_delay + 1``.
 
     :return:
         ratio:

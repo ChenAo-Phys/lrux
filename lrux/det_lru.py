@@ -6,13 +6,16 @@ import jax.numpy as jnp
 from jax._src.numpy import reductions
 
 
+_LowRankVecInput = Union[Array, int, Tuple[Array, Array], Tuple[Array, int]]
+
+
 def _check_mat(mat: Array) -> None:
     if mat.ndim != 2 or mat.shape[0] != mat.shape[1]:
         raise ValueError(f"Expect input matrix shape (n, n), got {mat.shape}.")
 
 
 def _standardize_uv(
-    u: Union[ArrayLike, Tuple[Array, ArrayLike]], n: int, dtype: jnp.dtype
+    u: _LowRankVecInput, n: int, dtype: jnp.dtype
 ) -> Tuple[Array, Array]:
     if isinstance(u, ArrayLike):
         u = jnp.asarray(u)
@@ -68,12 +71,12 @@ def _update_Ainv(
 
 def det_lru(
     Ainv: Array,
-    u: Union[ArrayLike, Tuple[Array, ArrayLike]],
-    v: Union[ArrayLike, Tuple[Array, ArrayLike]],
+    u: _LowRankVecInput,
+    v: _LowRankVecInput,
     return_update: bool = False,
 ) -> Union[Array, Tuple[Array, Array]]:
     r"""
-    Low-rank update of determinant :math:`\det(A_1) = \det(A_0 + vu^T)`
+    Low-rank update of determinant :math:`\det(A_1) = \det(A_0 + vu^T)`.
 
     :param Ainv:
         Inverse of the original matrix :math:`A_0^{-1}`, shape (n, n)
@@ -318,7 +321,7 @@ class DetCarrier(NamedTuple):
 
 def init_det_carrier(A: Array, max_delay: int, max_rank: int = 1) -> DetCarrier:
     r"""
-    Prepare the data and space for `~lrux.det_lru_delayed`
+    Prepare the data and space for `~lrux.det_lru_delayed`.
 
     :param A:
         The initial matrix :math:`A_0` with shape (n, n).
@@ -406,13 +409,13 @@ def _get_delayed_output(
 
 def det_lru_delayed(
     carrier: DetCarrier,
-    u: Union[ArrayLike, Tuple[Array, ArrayLike]],
-    v: Union[ArrayLike, Tuple[Array, ArrayLike]],
+    u: _LowRankVecInput,
+    v: _LowRankVecInput,
     return_update: bool = False,
     current_delay: Optional[int] = None,
 ) -> Union[Array, Tuple[Array, DetCarrier]]:
     r"""
-    Delayed low-rank update of determinant
+    Delayed low-rank update of determinant.
 
     :param carrier:
         The existing delayed update quantities, including :math:`A_0^{-1}`, and
@@ -425,17 +428,17 @@ def det_lru_delayed(
 
             b_t = (A_{t-1}^{-1})^T u_t
 
-        with :math:`t` from 1 to :math:`\tau-1`. 
+        with :math:`t` from 1 to :math:`\tau-1`.
         Initially provided by `~lrux.init_det_carrier`.
 
     :param u:
         Low-rank update vector(s) :math:`u_\tau`, the same as :math:`u` in `lrux.det_lru`.
-        The rank of u shouldn't exceed the maximum allowed rank specified 
+        The rank of u shouldn't exceed the maximum allowed rank specified
         in `~lrux.init_det_carrier`.
 
     :param v:
         Low-rank update vector(s) :math:`v_\tau`, the same as :math:`v` in `lrux.det_lru`.
-        The rank of v shouldn't exceed the maximum allowed rank specified 
+        The rank of v shouldn't exceed the maximum allowed rank specified
         in `~lrux.init_det_carrier`.
 
     :param return_update:
@@ -443,9 +446,10 @@ def det_lru_delayed(
         defaul to False.
 
     :param current_delay:
-        The current iterations :math:`\tau` of delayed updates. As python starts counting
-        from 0, the actual :math:`\tau` should be ``current_delay + 1``.
-        It must be specified when ``return_update`` is True.
+        The current iterations :math:`\tau` of delayed updates,
+        must be specified when ``return_update`` is True.
+        As python starts counting at 0, the actual :math:`\tau` value is given by 
+        ``current_delay + 1``.
 
     :return:
         ratio:
@@ -474,8 +478,8 @@ def det_lru_delayed(
                 b_\tau = (A_{\tau-1}^{-1})^T u_\tau = (A_0^{-1})^T u_\tau - \sum_{t=1}^{\tau-1} b_t (a_t^T u_\tau)
 
             When :math:`\tau` reaches the maximum delayed iterations :math:`T`
-            specified in `~lrux.init_det_carrier`, i.e. ``current_delay == max_delay - 1``, 
-            the current :math:`A_\tau` will be set as the new :math:`A_0`, 
+            specified in `~lrux.init_det_carrier`, i.e. ``current_delay == max_delay - 1``,
+            the current :math:`A_\tau` will be set as the new :math:`A_0`,
             whose inverse is given by
 
             .. math::
@@ -487,16 +491,16 @@ def det_lru_delayed(
 
     .. warning::
 
-        This function is only recommended for heavy users who understand why and when 
+        This function is only recommended for heavy users who understand why and when
         to use delayed updates. Otherwise, please choose `~\lrux.det_lru`.
 
     .. tip::
 
-        Similar to `~lrux.det_lru`, this function is compatible with ``jax.jit`` and 
+        Similar to `~lrux.det_lru`, this function is compatible with ``jax.jit`` and
         ``jax.vmap``, while ``return_update`` and ``current_delay`` are static arguments
         which shouldn't be jitted or vmapped.
 
-        We still recommend setting ``donate_argnums=0`` in ``jax.jit`` to reuse 
+        We still recommend setting ``donate_argnums=0`` in ``jax.jit`` to reuse
         the memory of ``carrier`` if it's no longer needed. For instance,
 
         .. code-block:: python

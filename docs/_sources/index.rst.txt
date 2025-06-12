@@ -8,6 +8,16 @@ lrux documentation
 
 Fast low-rank update (LRU) of matrix determinants and pfaffians in JAX
 
+Installation
+-------------------------------
+
+Requires Python 3.8+ and JAX 0.4.4+
+
+.. code-block::
+
+   pip install lrux
+
+
 .. currentmodule:: lrux
 
 

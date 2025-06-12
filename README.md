@@ -116,6 +116,5 @@ As the [pfaffian](https://en.wikipedia.org/wiki/Pfaffian) is not directly suppor
 Requires Python 3.8+ and JAX 0.4.4+
 
 ```
-git clone https://github.com/ChenAo-Phys/lrux.git
-pip install ./lrux
+pip install lrux
 ```

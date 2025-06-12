@@ -419,15 +419,22 @@
   <section id="lrux-documentation">
 <h1>lrux documentation<a class="headerlink" href="#lrux-documentation" title="Link to this heading">#</a></h1>
 <p>Fast low-rank update (LRU) of matrix determinants and pfaffians in JAX</p>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h2>
+<p>Requires Python 3.8+ and JAX 0.4.4+</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">lrux</span>
+</pre></div>
+</div>
+</section>
 <section id="low-rank-update-of-determinants">
 <h2>Low-rank update of determinants<a class="headerlink" href="#low-rank-update-of-determinants" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="lrux.det_lru.html#lrux.det_lru" title="lrux.det_lru"><code class="xref py py-obj docutils literal notranslate"><span class="pre">det_lru</span></code></a>(Ainv, u, v[, return_update])</p></td>
-<td><p>Low-rank update of determinant <span class="math notranslate nohighlight">\(\det(A_1) = \det(A_0 + vu^T)\)</span></p></td>
+<td><p>Low-rank update of determinant <span class="math notranslate nohighlight">\(\det(A_1) = \det(A_0 + vu^T)\)</span>.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="lrux.init_det_carrier.html#lrux.init_det_carrier" title="lrux.init_det_carrier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_det_carrier</span></code></a>(A, max_delay[, max_rank])</p></td>
-<td><p>Prepare the data and space for <a class="reference internal" href="lrux.det_lru_delayed.html#lrux.det_lru_delayed" title="lrux.det_lru_delayed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">det_lru_delayed</span></code></a></p></td>
+<td><p>Prepare the data and space for <a class="reference internal" href="lrux.det_lru_delayed.html#lrux.det_lru_delayed" title="lrux.det_lru_delayed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">det_lru_delayed</span></code></a>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="lrux.det_lru_delayed.html#lrux.det_lru_delayed" title="lrux.det_lru_delayed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">det_lru_delayed</span></code></a>(carrier, u, v[, ...])</p></td>
 <td><p>Delayed low-rank update of determinant.</p></td>
@@ -444,7 +451,7 @@
 <td><p>Low-rank update of pfaffian <span class="math notranslate nohighlight">\(\mathrm{pf}(A_1) = \mathrm{pf}(A_0 - u J u^T)\)</span>.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="lrux.init_pf_carrier.html#lrux.init_pf_carrier" title="lrux.init_pf_carrier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_pf_carrier</span></code></a>(A, max_delay[, max_rank])</p></td>
-<td><p>Prepare the data and space for <a class="reference internal" href="lrux.pf_lru_delayed.html#lrux.pf_lru_delayed" title="lrux.pf_lru_delayed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pf_lru_delayed</span></code></a></p></td>
+<td><p>Prepare the data and space for <a class="reference internal" href="lrux.pf_lru_delayed.html#lrux.pf_lru_delayed" title="lrux.pf_lru_delayed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pf_lru_delayed</span></code></a>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="lrux.pf_lru_delayed.html#lrux.pf_lru_delayed" title="lrux.pf_lru_delayed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pf_lru_delayed</span></code></a>(carrier, u[, return_update, ...])</p></td>
 <td><p>Delayed low-rank update of pfaffian.</p></td>
@@ -458,10 +465,10 @@
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="lrux.skew_eye.html#lrux.skew_eye" title="lrux.skew_eye"><code class="xref py py-obj docutils literal notranslate"><span class="pre">skew_eye</span></code></a>(n[, dtype])</p></td>
-<td><p>The skew-symmetric identity matrix</p></td>
+<td><p>The skew-symmetric identity matrix <span class="math notranslate nohighlight">\(J\)</span>.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="lrux.pf.html#lrux.pf" title="lrux.pf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pf</span></code></a>(A, *[, method])</p></td>
-<td><p>Compute the pfaffian of an array</p></td>
+<td><p>Compute the pfaffian of an array.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="lrux.slogpf.html#lrux.slogpf" title="lrux.slogpf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">slogpf</span></code></a>(A, *[, method])</p></td>
 <td><p>Compute the sign and (natural) logarithm of the pfaffian of an array.</p></td>
@@ -510,6 +517,7 @@
   </div>
   <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#low-rank-update-of-determinants">Low-rank update of determinants</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#low-rank-update-of-pfaffians">Low-rank update of pfaffians</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pfaffian-functions">Pfaffian functions</a></li>
