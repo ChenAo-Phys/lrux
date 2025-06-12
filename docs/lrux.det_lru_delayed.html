@@ -481,7 +481,7 @@ It must be specified when <code class="docutils literal notranslate"><span class
 \[r_\tau = \frac{\det(A_\tau)}{\det(A_{\tau-1})} = \det(R_\tau)\]</div>
 <p>where</p>
 <div class="math notranslate nohighlight">
-\[R_\tau = I + u_\tau^T A_0^{-1} v_\tau - \sum_{t=1}^{\tau-1} (u_\tau^T a_t) (b_\tau^T v_\tau)\]</div>
+\[R_\tau = I + u_\tau^T A_0^{-1} v_\tau - \sum_{t=1}^{\tau-1} (u_\tau^T a_t) (b_t^T v_\tau)\]</div>
 </dd>
 <dt>new_carrier:</dt><dd><p>Only returned when <code class="docutils literal notranslate"><span class="pre">return_update</span></code> is True. The new carrier contains
 the quantities from the input carrier, and in addition</p>
@@ -489,9 +489,10 @@ the quantities from the input carrier, and in addition</p>
 \[a_\tau = A_0^{-1} v_\tau - \sum_{t=1}^{\tau-1} a_t (b_t^T v_\tau)\]</div>
 <div class="math notranslate nohighlight">
 \[b_\tau = (A_0^{-1})^T u_\tau - \sum_{t=1}^{\tau-1} b_t (a_t^T u_\tau)\]</div>
-<p>When <span class="math notranslate nohighlight">\(\tau\)</span> reaches the maximum delayed iterations <span class="math notranslate nohighlight">\(T\)</span>, i.e.
-<code class="docutils literal notranslate"><span class="pre">current_delay</span> <span class="pre">==</span> <span class="pre">max_delay</span> <span class="pre">-</span> <span class="pre">1</span></code>, the current <span class="math notranslate nohighlight">\(A_\tau\)</span> will be set
-as the new <span class="math notranslate nohighlight">\(A_0\)</span>, whose inverse is given by</p>
+<p>When <span class="math notranslate nohighlight">\(\tau\)</span> reaches the maximum delayed iterations <span class="math notranslate nohighlight">\(T\)</span>
+specified in <a class="reference internal" href="lrux.init_det_carrier.html#lrux.init_det_carrier" title="lrux.init_det_carrier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_det_carrier</span></code></a>, i.e. <code class="docutils literal notranslate"><span class="pre">current_delay</span> <span class="pre">==</span> <span class="pre">max_delay</span> <span class="pre">-</span> <span class="pre">1</span></code>, 
+the current <span class="math notranslate nohighlight">\(A_\tau\)</span> will be set as the new <span class="math notranslate nohighlight">\(A_0\)</span>, 
+whose inverse is given by</p>
 <div class="math notranslate nohighlight">
 \[A_\tau^{-1} = A_0^{-1} - \sum_{t=1}^\tau a_t b_t^T\]</div>
 <p>The <code class="docutils literal notranslate"><span class="pre">Ainv</span></code> in <code class="docutils literal notranslate"><span class="pre">new_carrier</span></code> will be replaced by <span class="math notranslate nohighlight">\(A_\tau^{-1}\)</span>, and
@@ -503,7 +504,7 @@ as the new <span class="math notranslate nohighlight">\(A_0\)</span>, whose inve
 </dl>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>Similar to <a class="reference internal" href="lrux.det_lru.html#lrux.det_lru" title="lrux.det_lru"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lrux.det_lru</span></code></a>, this function is compatible with <code class="docutils literal notranslate"><span class="pre">jax.jit</span></code> and 
+<p>Similar to <a class="reference internal" href="lrux.det_lru.html#lrux.det_lru" title="lrux.det_lru"><code class="xref py py-obj docutils literal notranslate"><span class="pre">det_lru</span></code></a>, this function is compatible with <code class="docutils literal notranslate"><span class="pre">jax.jit</span></code> and 
 <code class="docutils literal notranslate"><span class="pre">jax.vmap</span></code>, while <code class="docutils literal notranslate"><span class="pre">return_update</span></code> and <code class="docutils literal notranslate"><span class="pre">current_delay</span></code> are static arguments
 which shouldn’t be jitted or vmapped.</p>
 <p>We still recommend setting <code class="docutils literal notranslate"><span class="pre">donate_argnums=0</span></code> in <code class="docutils literal notranslate"><span class="pre">jax.jit</span></code> to reuse 

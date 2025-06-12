@@ -458,15 +458,19 @@
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>A</strong> – The initial matrix <span class="math notranslate nohighlight">\(A_0\)</span> with shape (n, n).</p></li>
-<li><p><strong>max_delay</strong> – The maximum iterations <span class="math notranslate nohighlight">\(T\)</span> of delayed updates, usually chosen in the range
+<li><p><strong>max_delay</strong> – The maximum iterations T of delayed updates, usually chosen in the range
 [n/10, n/2].</p></li>
-<li><p><strong>max_rank</strong> – The maximum rank in delayed updates, default to 1.</p></li>
+<li><p><strong>max_rank</strong> – The maximum rank K in delayed updates, default to 1.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>carrier:</dt><dd><p>A <code class="xref py py-obj docutils literal notranslate"><span class="pre">NamedTuple</span></code> containing the initial matrix inverse <span class="math notranslate nohighlight">\(A_0^{-1}\)</span>, and
-the delayed update vectors <span class="math notranslate nohighlight">\(a\)</span> and <span class="math notranslate nohighlight">\(b\)</span> initialized to 0.</p>
+<dd class="field-even"><p><p>A <code class="docutils literal notranslate"><span class="pre">NamedTuple</span></code> with the following attributes.</p>
+<dl class="simple">
+<dt>Ainv:</dt><dd><p>The initial matrix inverse <span class="math notranslate nohighlight">\(A_0^{-1}\)</span> of shape (n, n).</p>
+</dd>
+<dt>a:</dt><dd><p>The delayed update vectors of shape (T, n, K), initialized to 0</p>
+</dd>
+<dt>b:</dt><dd><p>The delayed update vectors of shape (T, n, K), initialized to 0</p>
 </dd>
 </dl>
 </p>

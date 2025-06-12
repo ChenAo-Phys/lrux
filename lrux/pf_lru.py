@@ -39,8 +39,130 @@ def pf_lru(
     u: Union[Array, Tuple[Array, Array]],
     return_update: bool = False,
 ) -> Union[Array, Tuple[Array, Array]]:
-    """
-    Low-rank update of pfaffian
+    r"""
+    Low-rank update of pfaffian :math:`\mathrm{pf}(A_1) = \mathrm{pf}(A_0 - u J u^T)`.
+    Here :math:`J` is the skew-symmetric identity matrix
+        
+    .. math::
+
+        J = \begin{pmatrix}
+            0 & I \\ -I & 0
+        \end{pmatrix}
+
+    as given in `~lrux.skew_eye`.
+
+    :param Ainv:
+        Inverse of the original skew-symmetric matrix :math:`A_0^{-1}`, shape (n, n)
+
+    :param u:
+        Low-rank update vector(s) :math:`u`, the same as :math:`u` in `lrux.det_lru`.
+
+    :param return_update:
+        Whether the new matrix inverse :math:`A_1^{-1}` should be returned,
+        defaul to False.
+
+    :return:
+        ratio:
+            The ratio between two pfaffians
+
+            .. math::
+
+                r = \frac{\mathrm{pf}(A_1)}{\mathrm{pf}(A_0)} = \frac{\mathrm{pf}(R)}{\mathrm{pf}(J)}
+
+            where
+
+            .. math::
+
+                R = J + u^T A_0^{-1} u
+
+        new_Ainv:
+            The new matrix inverse
+
+            .. math::
+
+                A_1^{-1} = (A_0 + u J u^T)^{-1} = A_0^{-1} + (A_0^{-1} u) R^{-1} (A_0^{-1} u)^T
+
+            Only returned when ``return_update`` is True.
+
+    .. tip::
+
+        This function is compatible with ``jax.jit`` and ``jax.vmap``, while
+        ``return_update`` is a static argument which shouldn't be jitted or vmapped.
+
+        Furthermore, we recommend setting ``donate_argnums=0`` in ``jax.jit`` to reuse 
+        the memory of ``Ainv`` if it's no longer needed. This helps to greatly reduce 
+        the time and memory cost. For instance,
+
+        .. code-block:: python
+
+            lru_vmap = jax.vmap(pf_lru, in_axes=(0, 0, None))
+            lru_jit = jax.jit(lru_vmap, static_argnums=2, donate_argnums=0)
+
+    .. note::
+
+        Here are examples of how to define ``u`` before calling ``pf_lru(Ainv, u)``
+
+        **Update of 1 row and 1 column**
+
+        .. math::
+
+            A_1 - A_0 = \begin{pmatrix}
+                0 & -u_0 & 0 & 0 \\ 
+                u_0 & 0 & u_2 & u_3 \\
+                0 & -u_2 & 0 & 0 \\ 
+                0 & -u_3 & 0 & 0 \\ 
+            \end{pmatrix}
+            = -\begin{pmatrix}
+                u_0 & 0 \\ u_1 & 1 \\ u_2 & 0 \\ u_3 & 0
+            \end{pmatrix}
+            \begin{pmatrix}
+                0 & 1 \\ -1 & 0
+            \end{pmatrix}
+            \begin{pmatrix}
+                u_0 & u_1 & u_2 & u_3 \\
+                0 & 1 & 0 & 0\\
+            \end{pmatrix}
+            
+        .. code-block:: python
+        
+            u = (jnp.array([u0, u1, u2, u3]), 1)
+
+        **Update of 2 rows and 2 columns**
+
+        .. math::
+
+            \begin{split}
+                A_1 - A_0 &= \begin{pmatrix}
+                    0 & -u_{00} & 0 & -u_{10} \\ 
+                    u_{00} & 0 & u_{02} & u_{03} - u_{11} \\
+                    0 & -u_{02} & 0 & -u_{12} \\ 
+                    u_{10} & u_{11} - u_{03} & u_{12} & 0 \\
+                \end{pmatrix} \\
+                &= -\begin{pmatrix}
+                    u_{00} & u_{10} & 0 & 0 \\
+                    u_{01} & u_{11} & 1 & 0 \\
+                    u_{02} & u_{12} & 0 & 0 \\
+                    u_{03} & u_{13} & 0 & 1 \\
+                \end{pmatrix}
+                \begin{pmatrix}
+                    0 & 0 & 1 & 0 \\
+                    0 & 0 & 0 & 1 \\
+                    -1 & 0 & 0 & 0 \\
+                    0 & -1 & 0 & 0 \\
+                \end{pmatrix}
+                \begin{pmatrix}
+                    u_{00} & u_{01} & u_{02} & u_{03} \\
+                    u_{10} & u_{11} & u_{12} & u_{13} \\
+                    0 & 1 & 0 & 0 \\
+                    0 & 0 & 0 & 1 \\
+                \end{pmatrix}
+            \end{split}
+            
+        .. code-block:: python
+        
+            x = jnp.array([[u00, u10], [u01, u11], [u02, u12], [u03, u13]])
+            e = jnp.array([1, 3])
+            u = (x, e)
     """
     Ainv = _check_mat(Ainv)
     u = _standardize_uv(u, Ainv.shape[0], Ainv.dtype)
@@ -66,10 +188,33 @@ class PfCarrier(NamedTuple):
 
 
 def init_pf_carrier(A: Array, max_delay: int, max_rank: int = 2) -> PfCarrier:
+    r"""
+    Prepare the data and space for `~lrux.pf_lru_delayed`
+
+    :param A:
+        The initial skew-symmetric matrix :math:`A_0` with shape (n, n).
+
+    :param max_delay:
+        The maximum iterations T of delayed updates, usually chosen in the range
+        [n/10, n/2].
+
+    :param max_rank:
+        The maximum rank K in delayed updates, default to 2.
+
+    :return:
+        A ``NamedTuple`` with the following attributes.
+
+        Ainv:
+            The initial matrix inverse :math:`A_0^{-1}` of shape (n, n).
+        a:
+            The delayed update vectors of shape (T, n, K), initialized to 0
+        Rinv:
+            The delayed update matrices :math:`R_t^{-1}` of shape (T, K, K), initialized to 0
+    """
     if max_delay <= 0:
         raise ValueError(
             "`max_delay` should be a positive integer. "
-            "Otherwise, please use `det_lru` for non-delayed updates."
+            "Otherwise, please use `pf_lru` for non-delayed updates."
         )
     A = _check_mat(A)
     Ainv = jnp.linalg.inv(A)
@@ -141,8 +286,116 @@ def pf_lru_delayed(
     return_update: bool = False,
     current_delay: Optional[int] = None,
 ) -> Union[Array, Tuple[Array, PfCarrier]]:
-    """
-    Low-rank update of pfaffian with delayed updates
+    r"""
+    Delayed low-rank update of pfaffian. Only recommended for heavy users who
+    understand why and when to use delayed updates.
+
+    :param carrier:
+        The existing delayed update quantities, including :math:`A_0^{-1}`, and :math:`a_t`
+        and :math:`R_t^{-1}` with :math:`t` from 1 to :math:`\tau-1`.
+        Initially provided by `~lrux.init_pf_carrier`.
+
+    :param u:
+        Low-rank update vector(s) :math:`u_\tau`, the same as :math:`u` in `lrux.det_lru`.
+        The rank of u shouldn't exceed the maximum allowed rank specified
+        in `~lrux.init_pf_carrier`.
+
+    :param return_update:
+        Whether the new carrier with updated quantities should be returned,
+        defaul to False.
+
+    :param current_delay:
+        The current iterations :math:`\tau` of delayed updates. As python starts counting
+        from 0, the actual :math:`\tau` should be ``current_delay + 1``.
+        It must be specified when ``return_update`` is True.
+
+    :return:
+        ratio:
+            The ratio between two pfaffians
+
+            .. math::
+
+                r_\tau = \frac{\mathrm{pf}(A_\tau)}{\mathrm{pf}(A_{\tau-1})} = \frac{\mathrm{pf}(R_\tau)}{\mathrm{pf}(J)}
+
+            where
+
+            .. math::
+
+                R_\tau = J + u_\tau^T A_0^{-1} u_\tau + \sum_{t=1}^{\tau-1} (u_\tau^T a_t) (a_t^T u_\tau)
+
+        new_carrier:
+            Only returned when ``return_update`` is True. The new carrier contains
+            the quantities from the input carrier, and in addition :math:`R_\tau` and
+
+            .. math::
+
+                a_\tau = A_0^{-1} u_\tau + \sum_{t=1}^{\tau-1} a_t R_t^{-1} (a_t^T u_\tau)
+
+            When :math:`\tau` reaches the maximum delayed iterations :math:`T`
+            specified in `~lrux.init_pf_carrier`, i.e. ``current_delay == max_delay - 1``,
+            the current :math:`A_\tau` will be set as the new :math:`A_0`,
+            whose inverse is given by
+
+            .. math::
+
+                A_\tau^{-1} = A_0^{-1} + \sum_{t=1}^\tau a_t R_t^{-1} a_t^T
+
+            The ``Ainv`` in ``new_carrier`` will be replaced by :math:`A_\tau^{-1}`, and
+            ``a`` and ``Rinv`` will be set to 0.
+
+    .. tip::
+
+        Similar to `~lrux.det_lru_delayed` and `~lrux.pf_lru`, this function is compatible
+        with ``jax.jit`` and ``jax.vmap``, while ``return_update`` and ``current_delay``
+        are static arguments which shouldn't be jitted or vmapped.
+
+        We still recommend setting ``donate_argnums=0`` in ``jax.jit`` to reuse
+        the memory of ``carrier`` if it's no longer needed. For instance,
+
+        .. code-block:: python
+
+            lru_vmap = jax.vmap(pf_lru_delayed, in_axes=(0, 0, None, None))
+            lru_jit = jax.jit(lru_vmap, static_argnums=(2, 3), donate_argnums=0)
+
+    Here is a complete example of delayed updates.
+
+    .. code-block:: python
+
+        import os
+        os.environ["JAX_ENABLE_X64"] = "1"
+
+        import random
+        import jax
+        import jax.numpy as jnp
+        import jax.random as jr
+        from lrux import skew_eye, pf, init_pf_carrier, pf_lru_delayed
+
+        def _get_key():
+            seed = random.randint(0, 2**31 - 1)
+            return jr.key(seed)
+
+        dtype = jnp.float64
+        n = 10
+        k = 2
+        max_delay = n // 2
+        A = jr.normal(_get_key(), (n, n), dtype)
+        A = (A - A.T) / 2
+        carrier = init_pf_carrier(A, max_delay, k)
+        pfA0 = pf(A)
+
+        lru_fn = jax.jit(pf_lru_delayed, static_argnums=(2, 3), donate_argnums=0)
+
+        for i in range(20):
+            current_delay = i % max_delay
+            ki = random.randint(0, k // 2) * 2  # ensure ki is even
+            u = jr.normal(_get_key(), (n, ki), dtype)
+
+            ratio, carrier = lru_fn(carrier, u, True, current_delay)
+            J = skew_eye(ki // 2, dtype)
+            A -= u @ J @ u.T
+            pfA1 = pf(A)
+            assert jnp.allclose(ratio, pfA1 / pfA0)
+            pfA0 = pfA1
     """
     max_delay = carrier.a.shape[0]
     if current_delay is None:

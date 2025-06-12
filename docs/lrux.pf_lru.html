@@ -41,6 +41,7 @@
     <script src="_static/documentation_options.js?v=01f34227"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'lrux.pf_lru';</script>
     <link rel="canonical" href="https://chenao-phys.github.io/lrux/lrux.pf_lru.html" />
     <link rel="index" title="Index" href="genindex.html" />
@@ -452,7 +453,110 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="lrux.pf_lru">
 <span class="sig-prename descclassname"><span class="pre">lrux.</span></span><span class="sig-name descname"><span class="pre">pf_lru</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Ainv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Array</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Array</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_update</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Array</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Array</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#lrux.pf_lru" title="Link to this definition">#</a></dt>
-<dd><p>Low-rank update of pfaffian</p>
+<dd><p>Low-rank update of pfaffian <span class="math notranslate nohighlight">\(\mathrm{pf}(A_1) = \mathrm{pf}(A_0 - u J u^T)\)</span>.
+Here <span class="math notranslate nohighlight">\(J\)</span> is the skew-symmetric identity matrix</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}J = \begin{pmatrix}
+    0 &amp; I \\ -I &amp; 0
+\end{pmatrix}\end{split}\]</div>
+<p>as given in <a class="reference internal" href="lrux.skew_eye.html#lrux.skew_eye" title="lrux.skew_eye"><code class="xref py py-obj docutils literal notranslate"><span class="pre">skew_eye</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Ainv</strong> – Inverse of the original skew-symmetric matrix <span class="math notranslate nohighlight">\(A_0^{-1}\)</span>, shape (n, n)</p></li>
+<li><p><strong>u</strong> – Low-rank update vector(s) <span class="math notranslate nohighlight">\(u\)</span>, the same as <span class="math notranslate nohighlight">\(u\)</span> in <a class="reference internal" href="lrux.det_lru.html#lrux.det_lru" title="lrux.det_lru"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lrux.det_lru</span></code></a>.</p></li>
+<li><p><strong>return_update</strong> – Whether the new matrix inverse <span class="math notranslate nohighlight">\(A_1^{-1}\)</span> should be returned,
+defaul to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl>
+<dt>ratio:</dt><dd><p>The ratio between two pfaffians</p>
+<div class="math notranslate nohighlight">
+\[r = \frac{\mathrm{pf}(A_1)}{\mathrm{pf}(A_0)} = \frac{\mathrm{pf}(R)}{\mathrm{pf}(J)}\]</div>
+<p>where</p>
+<div class="math notranslate nohighlight">
+\[R = J + u^T A_0^{-1} u\]</div>
+</dd>
+<dt>new_Ainv:</dt><dd><p>The new matrix inverse</p>
+<div class="math notranslate nohighlight">
+\[A_1^{-1} = (A_0 + u J u^T)^{-1} = A_0^{-1} + (A_0^{-1} u) R^{-1} (A_0^{-1} u)^T\]</div>
+<p>Only returned when <code class="docutils literal notranslate"><span class="pre">return_update</span></code> is True.</p>
+</dd>
+</dl>
+</p>
+</dd>
+</dl>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>This function is compatible with <code class="docutils literal notranslate"><span class="pre">jax.jit</span></code> and <code class="docutils literal notranslate"><span class="pre">jax.vmap</span></code>, while
+<code class="docutils literal notranslate"><span class="pre">return_update</span></code> is a static argument which shouldn’t be jitted or vmapped.</p>
+<p>Furthermore, we recommend setting <code class="docutils literal notranslate"><span class="pre">donate_argnums=0</span></code> in <code class="docutils literal notranslate"><span class="pre">jax.jit</span></code> to reuse 
+the memory of <code class="docutils literal notranslate"><span class="pre">Ainv</span></code> if it’s no longer needed. This helps to greatly reduce 
+the time and memory cost. For instance,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">lru_vmap</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">pf_lru</span><span class="p">,</span> <span class="n">in_axes</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+<span class="n">lru_jit</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">lru_vmap</span><span class="p">,</span> <span class="n">static_argnums</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">donate_argnums</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Here are examples of how to define <code class="docutils literal notranslate"><span class="pre">u</span></code> before calling <code class="docutils literal notranslate"><span class="pre">pf_lru(Ainv,</span> <span class="pre">u)</span></code></p>
+<p><strong>Update of 1 row and 1 column</strong></p>
+<div class="math notranslate nohighlight">
+\[\begin{split}A_1 - A_0 = \begin{pmatrix}
+    0 &amp; -u_0 &amp; 0 &amp; 0 \\ 
+    u_0 &amp; 0 &amp; u_2 &amp; u_3 \\
+    0 &amp; -u_2 &amp; 0 &amp; 0 \\ 
+    0 &amp; -u_3 &amp; 0 &amp; 0 \\ 
+\end{pmatrix}
+= -\begin{pmatrix}
+    u_0 &amp; 0 \\ u_1 &amp; 1 \\ u_2 &amp; 0 \\ u_3 &amp; 0
+\end{pmatrix}
+\begin{pmatrix}
+    0 &amp; 1 \\ -1 &amp; 0
+\end{pmatrix}
+\begin{pmatrix}
+    u_0 &amp; u_1 &amp; u_2 &amp; u_3 \\
+    0 &amp; 1 &amp; 0 &amp; 0\\
+\end{pmatrix}\end{split}\]</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">u0</span><span class="p">,</span> <span class="n">u1</span><span class="p">,</span> <span class="n">u2</span><span class="p">,</span> <span class="n">u3</span><span class="p">]),</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Update of 2 rows and 2 columns</strong></p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{split}
+    A_1 - A_0 &amp;= \begin{pmatrix}
+        0 &amp; -u_{00} &amp; 0 &amp; -u_{10} \\ 
+        u_{00} &amp; 0 &amp; u_{02} &amp; u_{03} - u_{11} \\
+        0 &amp; -u_{02} &amp; 0 &amp; -u_{12} \\ 
+        u_{10} &amp; u_{11} - u_{03} &amp; u_{12} &amp; 0 \\
+    \end{pmatrix} \\
+    &amp;= -\begin{pmatrix}
+        u_{00} &amp; u_{10} &amp; 0 &amp; 0 \\
+        u_{01} &amp; u_{11} &amp; 1 &amp; 0 \\
+        u_{02} &amp; u_{12} &amp; 0 &amp; 0 \\
+        u_{03} &amp; u_{13} &amp; 0 &amp; 1 \\
+    \end{pmatrix}
+    \begin{pmatrix}
+        0 &amp; 0 &amp; 1 &amp; 0 \\
+        0 &amp; 0 &amp; 0 &amp; 1 \\
+        -1 &amp; 0 &amp; 0 &amp; 0 \\
+        0 &amp; -1 &amp; 0 &amp; 0 \\
+    \end{pmatrix}
+    \begin{pmatrix}
+        u_{00} &amp; u_{01} &amp; u_{02} &amp; u_{03} \\
+        u_{10} &amp; u_{11} &amp; u_{12} &amp; u_{13} \\
+        0 &amp; 1 &amp; 0 &amp; 0 \\
+        0 &amp; 0 &amp; 0 &amp; 1 \\
+    \end{pmatrix}
+\end{split}\end{split}\]</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">u00</span><span class="p">,</span> <span class="n">u10</span><span class="p">],</span> <span class="p">[</span><span class="n">u01</span><span class="p">,</span> <span class="n">u11</span><span class="p">],</span> <span class="p">[</span><span class="n">u02</span><span class="p">,</span> <span class="n">u12</span><span class="p">],</span> <span class="p">[</span><span class="n">u03</span><span class="p">,</span> <span class="n">u13</span><span class="p">]])</span>
+<span class="n">e</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">u</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
 </dd></dl>
 
 </section>

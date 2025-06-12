@@ -41,6 +41,7 @@
     <script src="_static/documentation_options.js?v=01f34227"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'lrux.init_pf_carrier';</script>
     <link rel="canonical" href="https://chenao-phys.github.io/lrux/lrux.init_pf_carrier.html" />
     <link rel="index" title="Index" href="genindex.html" />
@@ -452,7 +453,30 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="lrux.init_pf_carrier">
 <span class="sig-prename descclassname"><span class="pre">lrux.</span></span><span class="sig-name descname"><span class="pre">init_pf_carrier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_delay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_rank</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">PfCarrier</span></span></span><a class="headerlink" href="#lrux.init_pf_carrier" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
+<dd><p>Prepare the data and space for <a class="reference internal" href="lrux.pf_lru_delayed.html#lrux.pf_lru_delayed" title="lrux.pf_lru_delayed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pf_lru_delayed</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> – The initial skew-symmetric matrix <span class="math notranslate nohighlight">\(A_0\)</span> with shape (n, n).</p></li>
+<li><p><strong>max_delay</strong> – The maximum iterations T of delayed updates, usually chosen in the range
+[n/10, n/2].</p></li>
+<li><p><strong>max_rank</strong> – The maximum rank K in delayed updates, default to 2.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A <code class="docutils literal notranslate"><span class="pre">NamedTuple</span></code> with the following attributes.</p>
+<dl class="simple">
+<dt>Ainv:</dt><dd><p>The initial matrix inverse <span class="math notranslate nohighlight">\(A_0^{-1}\)</span> of shape (n, n).</p>
+</dd>
+<dt>a:</dt><dd><p>The delayed update vectors of shape (T, n, K), initialized to 0</p>
+</dd>
+<dt>Rinv:</dt><dd><p>The delayed update matrices <span class="math notranslate nohighlight">\(R_t^{-1}\)</span> of shape (T, K, K), initialized to 0</p>
+</dd>
+</dl>
+</p>
+</dd>
+</dl>
+</dd></dl>
 
 </section>
 

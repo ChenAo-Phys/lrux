@@ -319,16 +319,21 @@ def init_det_carrier(A: Array, max_delay: int, max_rank: int = 1) -> DetCarrier:
         The initial matrix :math:`A_0` with shape (n, n).
 
     :param max_delay:
-        The maximum iterations :math:`T` of delayed updates, usually chosen in the range
+        The maximum iterations T of delayed updates, usually chosen in the range
         [n/10, n/2].
 
     :param max_rank:
-        The maximum rank in delayed updates, default to 1.
+        The maximum rank K in delayed updates, default to 1.
 
     :return:
-        carrier:
-            A `NamedTuple` containing the initial matrix inverse :math:`A_0^{-1}`, and
-            the delayed update vectors :math:`a` and :math:`b` initialized to 0.
+        A ``NamedTuple`` with the following attributes.
+
+        Ainv:
+            The initial matrix inverse :math:`A_0^{-1}` of shape (n, n).
+        a:
+            The delayed update vectors of shape (T, n, K), initialized to 0
+        b:
+            The delayed update vectors of shape (T, n, K), initialized to 0
     """
 
     if max_delay <= 0:
@@ -442,7 +447,7 @@ def det_lru_delayed(
 
             .. math::
 
-                R_\tau = I + u_\tau^T A_0^{-1} v_\tau - \sum_{t=1}^{\tau-1} (u_\tau^T a_t) (b_\tau^T v_\tau)
+                R_\tau = I + u_\tau^T A_0^{-1} v_\tau - \sum_{t=1}^{\tau-1} (u_\tau^T a_t) (b_t^T v_\tau)
 
         new_carrier:
             Only returned when ``return_update`` is True. The new carrier contains
@@ -456,9 +461,10 @@ def det_lru_delayed(
 
                 b_\tau = (A_0^{-1})^T u_\tau - \sum_{t=1}^{\tau-1} b_t (a_t^T u_\tau)
 
-            When :math:`\tau` reaches the maximum delayed iterations :math:`T`, i.e.
-            ``current_delay == max_delay - 1``, the current :math:`A_\tau` will be set
-            as the new :math:`A_0`, whose inverse is given by
+            When :math:`\tau` reaches the maximum delayed iterations :math:`T`
+            specified in `~lrux.init_det_carrier`, i.e. ``current_delay == max_delay - 1``, 
+            the current :math:`A_\tau` will be set as the new :math:`A_0`, 
+            whose inverse is given by
 
             .. math::
 
@@ -469,7 +475,7 @@ def det_lru_delayed(
 
     .. tip::
 
-        Similar to `lrux.det_lru`, this function is compatible with ``jax.jit`` and 
+        Similar to `~lrux.det_lru`, this function is compatible with ``jax.jit`` and 
         ``jax.vmap``, while ``return_update`` and ``current_delay`` are static arguments
         which shouldn't be jitted or vmapped.
 
