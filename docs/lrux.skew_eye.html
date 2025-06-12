@@ -41,6 +41,7 @@
     <script src="_static/documentation_options.js?v=01f34227"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'lrux.skew_eye';</script>
     <link rel="canonical" href="https://chenao-phys.github.io/lrux/lrux.skew_eye.html" />
     <link rel="index" title="Index" href="genindex.html" />
@@ -451,10 +452,24 @@
 <h1>lrux.skew_eye<a class="headerlink" href="#lrux-skew-eye" title="Link to this heading">#</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="lrux.skew_eye">
-<span class="sig-prename descclassname"><span class="pre">lrux.</span></span><span class="sig-name descname"><span class="pre">skew_eye</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n:</span> <span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype:</span> <span class="pre">~numpy.dtype</span> <span class="pre">=</span> <span class="pre">&lt;class</span> <span class="pre">'jax.numpy.float32'&gt;</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Array</span></span></span><a class="headerlink" href="#lrux.skew_eye" title="Link to this definition">#</a></dt>
-<dd><p>Return the skew-symmetric identity matrix of shape (2n, 2n).
-The matrix is defined as:
-J = [[0, I], [-I, 0]]</p>
+<span class="sig-prename descclassname"><span class="pre">lrux.</span></span><span class="sig-name descname"><span class="pre">skew_eye</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dtype</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Array</span></span></span><a class="headerlink" href="#lrux.skew_eye" title="Link to this definition">#</a></dt>
+<dd><p>The skew-symmetric identity matrix</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> – Number of rows in the output divided by 2.</p></li>
+<li><p><strong>dtype</strong> – Optional dtype, default to floating point.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>The skew-symmetric identity matrix of shape (2n, 2n), defined as</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}J = \begin{pmatrix}
+    0 &amp; I \\ -I &amp; 0
+\end{pmatrix}\end{split}\]</div>
+</p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>

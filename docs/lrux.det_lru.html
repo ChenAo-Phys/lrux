@@ -41,6 +41,7 @@
     <script src="_static/documentation_options.js?v=01f34227"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'lrux.det_lru';</script>
     <link rel="canonical" href="https://chenao-phys.github.io/lrux/lrux.det_lru.html" />
     <link rel="index" title="Index" href="genindex.html" />
@@ -452,7 +453,188 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="lrux.det_lru">
 <span class="sig-prename descclassname"><span class="pre">lrux.</span></span><span class="sig-name descname"><span class="pre">det_lru</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Ainv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Array</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Array</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Array</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Array</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_update</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Array</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Array</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#lrux.det_lru" title="Link to this definition">#</a></dt>
-<dd><p>Low-rank update of determinant</p>
+<dd><p>Low-rank update of determinant <span class="math notranslate nohighlight">\(\det(A_1) = \det(A_0 + vu^T)\)</span></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Ainv</strong> – Inverse of the original matrix <span class="math notranslate nohighlight">\(A_0^{-1}\)</span>, shape (n, n)</p></li>
+<li><p><strong>u</strong> – <p>Low-rank update vector(s) <span class="math notranslate nohighlight">\(u\)</span>. There are several acceptable inputs
+of <code class="docutils literal notranslate"><span class="pre">u</span></code> as listed below.</p>
+<dl>
+<dt>An array with shape (n,) or (n, k):</dt><dd><p>Direct expression of full low-rank matrix.</p>
+</dd>
+<dt>An integer or array of integers with size k:</dt><dd><p>One-hot vectors <code class="docutils literal notranslate"><span class="pre">u_full</span> <span class="pre">=</span> <span class="pre">jnp.zeros((n,</span> <span class="pre">k)).at[u,</span> <span class="pre">jnp.arange(k)].set(1)</span></code>.
+For example, when you need a full matrix</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> 
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> 
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+<p>you can alternatively specify</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd>
+<dt>A tuple of two arrays, with respective shapes (n, k0) and (k1,):</dt><dd><p>A concatenation of the previous two. For example, when you need a full matrix</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+    <span class="p">[</span><span class="n">u00</span><span class="p">,</span> <span class="n">u01</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">u10</span><span class="p">,</span> <span class="n">u11</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> 
+    <span class="p">[</span><span class="n">u20</span><span class="p">,</span> <span class="n">u21</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> 
+    <span class="p">[</span><span class="n">u30</span><span class="p">,</span> <span class="n">u31</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+<p>you can alternatively specify</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+    <span class="p">[</span><span class="n">u00</span><span class="p">,</span> <span class="n">u01</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">u10</span><span class="p">,</span> <span class="n">u11</span><span class="p">],</span> 
+    <span class="p">[</span><span class="n">u20</span><span class="p">,</span> <span class="n">u21</span><span class="p">],</span> 
+    <span class="p">[</span><span class="n">u30</span><span class="p">,</span> <span class="n">u31</span><span class="p">],</span>
+<span class="p">])</span>
+<span class="n">e</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">u</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+<p>The matrix product of one-hot vectors is internally performed by matrix slicing
+for better performance, so an input of indices is preferred.</p>
+</p></li>
+<li><p><strong>v</strong> – <p>Low-rank update vector(s) <span class="math notranslate nohighlight">\(v\)</span>. The acceptable inputs are similar to <code class="docutils literal notranslate"><span class="pre">u</span></code>.
+When the input is a tuple of two arrays <code class="docutils literal notranslate"><span class="pre">v</span> <span class="pre">=</span> <span class="pre">(x,</span> <span class="pre">e)</span></code>, for convenience
+the concatenation order is reversely given by <code class="docutils literal notranslate"><span class="pre">jnp.concatenate((ve,</span> <span class="pre">vx),</span> <span class="pre">axis=1)</span></code>.
+Therefore, when you need</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">v</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">v00</span><span class="p">,</span> <span class="n">v01</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">v10</span><span class="p">,</span> <span class="n">v11</span><span class="p">],</span> 
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">v20</span><span class="p">,</span> <span class="n">u21</span><span class="p">],</span> 
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">v30</span><span class="p">,</span> <span class="n">v31</span><span class="p">],</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+<p>you can alternatively specify</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+    <span class="p">[</span><span class="n">v00</span><span class="p">,</span> <span class="n">v01</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">v10</span><span class="p">,</span> <span class="n">v11</span><span class="p">],</span> 
+    <span class="p">[</span><span class="n">v20</span><span class="p">,</span> <span class="n">v21</span><span class="p">],</span> 
+    <span class="p">[</span><span class="n">v30</span><span class="p">,</span> <span class="n">v31</span><span class="p">],</span>
+<span class="p">])</span>
+<span class="n">e</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">u</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+</pre></div>
+</div>
+</p></li>
+<li><p><strong>return_update</strong> – Whether the new matrix inverse <span class="math notranslate nohighlight">\(A_1^{-1}\)</span> should be returned,
+defaul to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl>
+<dt>ratio:</dt><dd><p>The ratio between two determinants</p>
+<div class="math notranslate nohighlight">
+\[r = \frac{\det(A_1)}{\det(A_0)} = \det(R)\]</div>
+<p>where</p>
+<div class="math notranslate nohighlight">
+\[R = I + u^T A_0^{-1} v\]</div>
+</dd>
+<dt>new_Ainv:</dt><dd><p>The new matrix inverse</p>
+<div class="math notranslate nohighlight">
+\[A_1^{-1} = (A_0 + vu^T)^{-1} = A_0^{-1} - A_0^{-1} v R^{-1} u^T A_0^{-1}\]</div>
+<p>Only returned when <code class="docutils literal notranslate"><span class="pre">return_update</span></code> is True.</p>
+</dd>
+</dl>
+</p>
+</dd>
+</dl>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>This function is compatible with <code class="docutils literal notranslate"><span class="pre">jax.jit</span></code> and <code class="docutils literal notranslate"><span class="pre">jax.vmap</span></code>, while
+<code class="docutils literal notranslate"><span class="pre">return_update</span></code> is a static argument which shouldn’t be jitted or vmapped.</p>
+<p>Furthermore, we recommend setting <code class="docutils literal notranslate"><span class="pre">donate_argnums=0</span></code> in <code class="docutils literal notranslate"><span class="pre">jax.jit</span></code> to reuse 
+the memory of <code class="docutils literal notranslate"><span class="pre">Ainv</span></code> if it’s no longer needed. This helps to greatly reduce 
+the time and memory cost. For instance,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">lru_vmap</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">det_lru</span><span class="p">,</span> <span class="n">in_axes</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+<span class="n">lru_jit</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">lru_vmap</span><span class="p">,</span> <span class="n">static_argnums</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">donate_argnums</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Here are examples of how to define <code class="docutils literal notranslate"><span class="pre">u</span></code> and <code class="docutils literal notranslate"><span class="pre">v</span></code> before calling <code class="docutils literal notranslate"><span class="pre">det_lru(Ainv,</span> <span class="pre">u,</span> <span class="pre">v)</span></code></p>
+<p><strong>Rank-1 row update</strong></p>
+<div class="math notranslate nohighlight">
+\[\begin{split}A_1 - A_0 = \begin{pmatrix}
+    0 &amp; 0 &amp; 0 &amp; 0 \\ 
+    u_0 &amp; u_1 &amp; u_2 &amp; u_3 \\
+    0 &amp; 0 &amp; 0 &amp; 0 \\ 
+    0 &amp; 0 &amp; 0 &amp; 0 \\ 
+\end{pmatrix}
+= \begin{pmatrix}
+    0 \\ 1 \\ 0 \\ 0
+\end{pmatrix}
+(u_0, u_1, u_2, u_3)\end{split}\]</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">u0</span><span class="p">,</span> <span class="n">u1</span><span class="p">,</span> <span class="n">u2</span><span class="p">,</span> <span class="n">u3</span><span class="p">])</span>
+<span class="n">v</span> <span class="o">=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p><strong>Rank-1 column update</strong></p>
+<div class="math notranslate nohighlight">
+\[\begin{split}A_1 - A_0 = \begin{pmatrix}
+    0 &amp; 0 &amp; v_0 &amp; 0 \\ 
+    0 &amp; 0 &amp; v_1 &amp; 0 \\
+    0 &amp; 0 &amp; v_2 &amp; 0 \\ 
+    0 &amp; 0 &amp; v_3 &amp; 0 \\ 
+\end{pmatrix}
+= \begin{pmatrix}
+    v_0 \\ v_1 \\ v_2 \\ v_3
+\end{pmatrix}
+(0, 0, 1, 0)\end{split}\]</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">v</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">v0</span><span class="p">,</span> <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">,</span> <span class="n">v3</span><span class="p">])</span>
+</pre></div>
+</div>
+<p><strong>Rank-2 row update</strong></p>
+<div class="math notranslate nohighlight">
+\[\begin{split}A_1 - A_0 = \begin{pmatrix}
+    0 &amp; 0 &amp; 0 &amp; 0 \\ 
+    u_{00} &amp; u_{01} &amp; u_{02} &amp; u_{03} \\
+    0 &amp; 0 &amp; 0 &amp; 0 \\ 
+    u_{10} &amp; u_{11} &amp; u_{12} &amp; u_{13} \\
+\end{pmatrix}
+= \begin{pmatrix}
+    0 &amp; 0 \\ 1 &amp; 0 \\ 0 &amp; 0 \\ 0 &amp; 1
+\end{pmatrix}
+\begin{pmatrix}
+    u_{00} &amp; u_{01} &amp; u_{02} &amp; u_{03} \\
+    u_{10} &amp; u_{11} &amp; u_{12} &amp; u_{13} \\
+\end{pmatrix}\end{split}\]</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">u00</span><span class="p">,</span> <span class="n">u10</span><span class="p">],</span> <span class="p">[</span><span class="n">u01</span><span class="p">,</span> <span class="n">u11</span><span class="p">],</span> <span class="p">[</span><span class="n">u02</span><span class="p">,</span> <span class="n">u12</span><span class="p">],</span> <span class="p">[</span><span class="n">u03</span><span class="p">,</span> <span class="n">u13</span><span class="p">]])</span>
+<span class="n">v</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+</pre></div>
+</div>
+<p><strong>Simultaneous update of row and column</strong></p>
+<div class="math notranslate nohighlight">
+\[\begin{split}A_1 - A_0 = \begin{pmatrix}
+    0 &amp; 0 &amp; v_0 &amp; 0 \\ 
+    u_0 &amp; u_1 &amp; u_2 + v_1 &amp; u_3 \\
+    0 &amp; 0 &amp; v_2 &amp; 0 \\ 
+    0 &amp; 0 &amp; v_3 &amp; 0 \\ 
+\end{pmatrix}
+= \begin{pmatrix}
+    0 &amp; v_0 \\ 1 &amp; v_1 \\ 0 &amp; v_2 \\ 0 &amp; v_3
+\end{pmatrix}
+\begin{pmatrix}
+    u_0 &amp; u_1 &amp; u_2 &amp; u_3 \\
+    0 &amp; 0 &amp; 1 &amp; 0 \\
+\end{pmatrix}\end{split}\]</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">u0</span><span class="p">,</span> <span class="n">u1</span><span class="p">,</span> <span class="n">u2</span><span class="p">,</span> <span class="n">u3</span><span class="p">]),</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">v</span> <span class="o">=</span> <span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">v0</span><span class="p">,</span> <span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">,</span> <span class="n">v3</span><span class="p">]),</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
 </dd></dl>
 
 </section>

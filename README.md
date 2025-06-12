@@ -104,7 +104,7 @@ assert jnp.allclose(Ainv, jnp.linalg.inv(A2))
 The main functions of lrux include `det_lru`, `det_lru_delayed`, `pf_lru`, and `pf_lru_delayed`. They provide:
 
 - Row and column updates
-- General low-rank updates
+- General rank-k updates
 - Delayed updates
 - `jit` and `vmap` compatibility
 

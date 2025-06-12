@@ -41,6 +41,7 @@
     <script src="_static/documentation_options.js?v=01f34227"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
     <link rel="canonical" href="https://chenao-phys.github.io/lrux/index.html" />
     <link rel="index" title="Index" href="genindex.html" />
@@ -423,13 +424,13 @@
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="lrux.det_lru.html#lrux.det_lru" title="lrux.det_lru"><code class="xref py py-obj docutils literal notranslate"><span class="pre">det_lru</span></code></a>(Ainv, u, v[, return_update])</p></td>
-<td><p>Low-rank update of determinant</p></td>
+<td><p>Low-rank update of determinant <span class="math notranslate nohighlight">\(\det(A_1) = \det(A_0 + vu^T)\)</span></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="lrux.init_det_carrier.html#lrux.init_det_carrier" title="lrux.init_det_carrier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_det_carrier</span></code></a>(A, max_delay[, max_rank])</p></td>
-<td><p></p></td>
+<td><p>Prepare the data and space for <a class="reference internal" href="lrux.det_lru_delayed.html#lrux.det_lru_delayed" title="lrux.det_lru_delayed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">det_lru_delayed</span></code></a></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="lrux.det_lru_delayed.html#lrux.det_lru_delayed" title="lrux.det_lru_delayed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">det_lru_delayed</span></code></a>(carrier, u, v[, ...])</p></td>
-<td><p>Low-rank update of determinant with delayed updates</p></td>
+<td><p>Delayed low-rank update of determinant.</p></td>
 </tr>
 </tbody>
 </table>
@@ -457,13 +458,13 @@
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="lrux.skew_eye.html#lrux.skew_eye" title="lrux.skew_eye"><code class="xref py py-obj docutils literal notranslate"><span class="pre">skew_eye</span></code></a>(n[, dtype])</p></td>
-<td><p>Return the skew-symmetric identity matrix of shape (2n, 2n).</p></td>
+<td><p>The skew-symmetric identity matrix</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="lrux.pf.html#lrux.pf" title="lrux.pf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pf</span></code></a>(A, *[, method])</p></td>
-<td><p>Return pfaffian of the input matrix A.</p></td>
+<td><p>Compute the pfaffian of an array</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="lrux.slogpf.html#lrux.slogpf" title="lrux.slogpf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">slogpf</span></code></a>(A, *[, method])</p></td>
-<td><p>Return the log of pfaffian.</p></td>
+<td><p>Compute the sign and (natural) logarithm of the pfaffian of an array.</p></td>
 </tr>
 </tbody>
 </table>

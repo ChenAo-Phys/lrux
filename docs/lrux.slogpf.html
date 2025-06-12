@@ -451,7 +451,49 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="lrux.slogpf">
 <span class="sig-prename descclassname"><span class="pre">lrux.</span></span><span class="sig-name descname"><span class="pre">slogpf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Array</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'householder'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">SlogpfResult</span></span></span><a class="headerlink" href="#lrux.slogpf" title="Link to this definition">#</a></dt>
-<dd><p>Return the log of pfaffian. A customized vjp is used for faster gradients.</p>
+<dd><p>Compute the sign and (natural) logarithm of the pfaffian of an array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> – An array with shape (…, n, n)</p></li>
+<li><p><strong>method</strong> – <p>The method used to compute the pfaffian. Options include</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;householder&quot;</span></code>:</dt><dd><p>Houserholder transformation, internally using <code class="docutils literal notranslate"><span class="pre">jax.lax.fori_loop</span></code>
+to balance between running and compiling time;</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;householder_for&quot;</span></code>:</dt><dd><p>Houserholder transformation, internally using jitted python for loops
+to reduce the running time at a cost of much longer compiling time;</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;schur&quot;&quot;</span></code>:</dt><dd><p>Schur decomposition using 
+<a class="reference external" href="https://docs.jax.dev/en/latest/_autosummary/jax.scipy.linalg.schur.html">jax.scipy.linalg.schur</a>,
+but only available on CPU and real dtypes.</p>
+</dd>
+</dl>
+<p>The default method is <code class="docutils literal notranslate"><span class="pre">&quot;householder&quot;</span></code>.</p>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A <code class="docutils literal notranslate"><span class="pre">NamedTuple</span></code> with the following attributes. Both attribtutes have the same
+batch dimension as the input A.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">sign</span></code>:</dt><dd><p>sign(A). For a real input, it’s 1, 0, or -1. For a complex input, it’s a
+complex number with absolute value 1, or else 0.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">logabspf</span></code>:</dt><dd><p>The natural log of the absolute value of the pfaffian.</p>
+</dd>
+</dl>
+</p>
+</dd>
+</dl>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The input A is always be skew-symmetrized.</p>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>This function is backward compatible for both real and complex dtypes.</p>
+</div>
 </dd></dl>
 
 </section>

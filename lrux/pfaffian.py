@@ -5,11 +5,24 @@ import jax
 import jax.numpy as jnp
 
 
-def skew_eye(n: int, dtype: jnp.dtype = jnp.float32) -> Array:
-    """
-    Return the skew-symmetric identity matrix of shape (2n, 2n).
-    The matrix is defined as:
-    J = [[0, I], [-I, 0]]
+def skew_eye(n: int, dtype: Optional[jnp.dtype] = None) -> Array:
+    r"""
+    The skew-symmetric identity matrix
+
+    :param n:
+        Number of rows in the output divided by 2.
+
+    :param dtype:
+        Optional dtype, default to floating point.
+
+    :return:
+        The skew-symmetric identity matrix of shape (2n, 2n), defined as
+        
+        .. math::
+
+            J = \begin{pmatrix}
+                0 & I \\ -I & 0
+            \end{pmatrix}
     """
     I = jnp.eye(n, dtype=dtype)
     O = jnp.zeros((n, n), dtype=dtype)
@@ -156,7 +169,47 @@ class SlogpfResult(NamedTuple):
 @partial(jax.jit, static_argnames=("method",))
 def slogpf(A: Array, *, method: str = "householder") -> SlogpfResult:
     """
-    Return the log of pfaffian. A customized vjp is used for faster gradients.
+    Compute the sign and (natural) logarithm of the pfaffian of an array.
+
+    :param A:
+        An array with shape (..., n, n)
+
+    :param method:
+        The method used to compute the pfaffian. Options include
+
+        ``"householder"``:
+            Houserholder transformation, internally using ``jax.lax.fori_loop``
+            to balance between running and compiling time;
+
+        ``"householder_for"``:
+            Houserholder transformation, internally using jitted python for loops
+            to reduce the running time at a cost of much longer compiling time;
+
+        ``"schur""``:
+            Schur decomposition using 
+            `jax.scipy.linalg.schur <https://docs.jax.dev/en/latest/_autosummary/jax.scipy.linalg.schur.html>`_,
+            but only available on CPU and real dtypes.
+
+        The default method is ``"householder"``.
+
+    :return:
+        A ``NamedTuple`` with the following attributes. Both attribtutes have the same
+        batch dimension as the input A.
+
+        ``sign``:
+            sign(A). For a real input, it's 1, 0, or -1. For a complex input, it's a
+            complex number with absolute value 1, or else 0.
+        
+        ``logabspf``:
+            The natural log of the absolute value of the pfaffian.
+    
+    .. tip::
+
+        The input A is always be skew-symmetrized.
+
+    .. tip::
+
+        This function is backward compatible for both real and complex dtypes.
     """
     A, slogpf_fn = _check_input(A, method)
 
@@ -175,7 +228,39 @@ def slogpf(A: Array, *, method: str = "householder") -> SlogpfResult:
 @partial(jax.jit, static_argnames=("method",))
 def pf(A: Array, *, method: str = "householder") -> Array:
     """
-    Return pfaffian of the input matrix A. A customized vjp is used for faster gradients.
+    Compute the pfaffian of an array
+
+    :param A:
+        An array with shape (..., n, n)
+
+    :param method:
+        The method used to compute the pfaffian. Options include
+
+        ``"householder"``:
+            Houserholder transformation, internally using ``jax.lax.fori_loop``
+            to balance between running and compiling time;
+
+        ``"householder_for"``:
+            Houserholder transformation, internally using jitted python for loops
+            to reduce the running time at a cost of much longer compiling time;
+
+        ``"schur""``:
+            Schur decomposition using 
+            `jax.scipy.linalg.schur <https://docs.jax.dev/en/latest/_autosummary/jax.scipy.linalg.schur.html>`_,
+            but only available on CPU and real dtypes.
+
+        The default method is ``"householder"``.
+
+    :return:
+        The pfaffian of A with the same batch dimensions.
+    
+    .. tip::
+
+        The input A is always be skew-symmetrized.
+
+    .. tip::
+
+        This function is backward compatible for both real and complex dtypes.
     """
     A, slogpf_fn = _check_input(A, method)
 
