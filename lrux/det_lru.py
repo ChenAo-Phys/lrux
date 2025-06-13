@@ -79,89 +79,13 @@ def det_lru(
     Low-rank update of determinant :math:`\det(A_1) = \det(A_0 + vu^T)`.
 
     :param Ainv:
-        Inverse of the original matrix :math:`A_0^{-1}`, shape (n, n)
+        Inverse of the original matrix :math:`A_0^{-1}` with shape (n, n)
 
     :param u:
-        Low-rank update vector(s) :math:`u`. There are several acceptable inputs
-        of ``u`` as listed below.
-
-        An array with shape (n,) or (n, k):
-            Direct expression of full low-rank vector(s).
-
-        An integer or array of integers with size k:
-            One-hot vectors ``u_full = jnp.zeros((n, k)).at[u, jnp.arange(k)].set(1)``.
-            For example, when you need a full matrix
-
-            .. code-block:: python
-
-                u = jnp.array([
-                    [0, 0],
-                    [1, 0], 
-                    [0, 0], 
-                    [0, 1],
-                ])
-            
-            you can alternatively specify 
-
-            .. code-block:: python
-            
-                u = jnp.array([1, 3])
-
-        A tuple of two arrays, with respective shapes (n, k0) and (k1,):
-            A concatenation of the previous two. For example, when you need a full matrix
-
-            .. code-block:: python
-
-                u = jnp.array([
-                    [u00, u01, 0, 0],
-                    [u10, u11, 1, 0], 
-                    [u20, u21, 0, 0], 
-                    [u30, u31, 0, 1],
-                ])
-
-            you can alternatively specify
-
-            .. code-block:: python
-            
-                x = jnp.array([
-                    [u00, u01],
-                    [u10, u11], 
-                    [u20, u21], 
-                    [u30, u31],
-                ])
-                e = jnp.array([1, 3])
-                u = (x, e)
-
-        The matrix product of one-hot vectors is internally performed by matrix slicing
-        for better performance, so an input of indices is preferred.
+        Low-rank update vector(s) :math:`u`. See the note below for details.
 
     :param v:
-        Low-rank update vector(s) :math:`v`. The acceptable inputs are similar to ``u``.
-        When the input is a tuple of two arrays ``v = (x, e)``, for convenience
-        the concatenation order is reversely given by ``jnp.concatenate((ve, vx), axis=1)``.
-        Therefore, when you need
-
-        .. code-block:: python
-
-            v = jnp.array([
-                [0, 0, v00, v01],
-                [1, 0, v10, v11], 
-                [0, 0, v20, u21], 
-                [0, 1, v30, v31],
-            ])
-
-        you can alternatively specify
-
-        .. code-block:: python
-        
-            x = jnp.array([
-                [v00, v01],
-                [v10, v11], 
-                [v20, v21], 
-                [v30, v31],
-            ])
-            e = jnp.array([1, 3])
-            u = (x, e)
+        Low-rank update vector(s) :math:`v`. See the note below for details.
 
     :param return_update:
         Whether the new matrix inverse :math:`A_1^{-1}` should be returned,
@@ -203,8 +127,78 @@ def det_lru(
 
             lru_vmap = jax.vmap(det_lru, in_axes=(0, 0, 0, None))
             lru_jit = jax.jit(lru_vmap, static_argnums=3, donate_argnums=0)
-
+    
     .. note::
+
+        We often need to define ``u`` and ``v`` as one-hot vectors, for instance,
+        ``v = jnp.array([0, 1, 0, 0])``. In this case, the matrix product like  ``Ainv @ v`` 
+        can be alternatively performed by ``Ainv[:, 1]`` to achieve great acceleration.
+
+        Therefore, we allow ``u`` and ``v`` to be provided not only by dense arrays,
+        but also by one-hot indeces. The acceptable inputs are listed below.
+
+        An array with shape (n,) or (n, k):
+            Dense array of ``u`` or ``v``.
+
+        An integer or array of integers with size k:
+            One-hot indices. The full array is defined as
+            ``u_full = jnp.zeros((n, k)).at[u, jnp.arange(k)].set(1)`` and similarly for ``v``.
+            For example, when you need a full matrix
+
+            .. code-block:: python
+
+                u = jnp.array([
+                    [0, 0],
+                    [1, 0], 
+                    [0, 0], 
+                    [0, 1],
+                ])
+            
+            you can alternatively specify 
+
+            .. code-block:: python
+            
+                u = jnp.array([1, 3])
+
+        A tuple of two arrays with respective shapes (n, k0) and (k1,):
+            A concatenation of the previous two. For example, when you need a full matrix
+
+            .. code-block:: python
+
+                u = jnp.array([
+                    [x00, x01, 0, 0],
+                    [x10, x11, 1, 0], 
+                    [x20, x21, 0, 0], 
+                    [x30, x31, 0, 1],
+                ])
+
+            you can alternatively specify
+
+            .. code-block:: python
+            
+                x = jnp.array([
+                    [x00, x01],
+                    [x10, x11], 
+                    [x20, x21], 
+                    [x30, x31],
+                ])
+                e = jnp.array([1, 3])
+                u = (x, e)
+
+            As discussed in the note below, we usually need the one-hot vectors of ``v``
+            to be on the left of dense vectors. Therefore, when we similarly define
+            ``v = (x, e)``, it actually represents a different array
+
+            .. code-block:: python
+
+                v = jnp.array([
+                    [0, 0, x00, x01],
+                    [1, 0, x10, x11], 
+                    [0, 0, x20, x21], 
+                    [0, 1, x30, x31],
+                ])
+
+    .. admonition:: Example
 
         Here are examples of how to define ``u`` and ``v`` before calling ``det_lru(Ainv, u, v)``.
         Keep in mind that the low-rank update we need takes the form

@@ -98,7 +98,7 @@ def pf_lru(
             lru_vmap = jax.vmap(pf_lru, in_axes=(0, 0, None))
             lru_jit = jax.jit(lru_vmap, static_argnums=2, donate_argnums=0)
 
-    .. note::
+    .. admonition:: Example
 
         Here are examples of how to define ``u`` before calling ``pf_lru(Ainv, u)``.
         Keep in mind that the low-rank update we need should be skew-symmetric and takes

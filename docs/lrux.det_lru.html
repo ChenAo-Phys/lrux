@@ -30,7 +30,7 @@
   <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
 <link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
   
   <!-- So that users can add custom icons -->
   <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
@@ -457,76 +457,9 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>Ainv</strong> – Inverse of the original matrix <span class="math notranslate nohighlight">\(A_0^{-1}\)</span>, shape (n, n)</p></li>
-<li><p><strong>u</strong> – <p>Low-rank update vector(s) <span class="math notranslate nohighlight">\(u\)</span>. There are several acceptable inputs
-of <code class="docutils literal notranslate"><span class="pre">u</span></code> as listed below.</p>
-<dl>
-<dt>An array with shape (n,) or (n, k):</dt><dd><p>Direct expression of full low-rank vector(s).</p>
-</dd>
-<dt>An integer or array of integers with size k:</dt><dd><p>One-hot vectors <code class="docutils literal notranslate"><span class="pre">u_full</span> <span class="pre">=</span> <span class="pre">jnp.zeros((n,</span> <span class="pre">k)).at[u,</span> <span class="pre">jnp.arange(k)].set(1)</span></code>.
-For example, when you need a full matrix</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
-    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
-    <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> 
-    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> 
-    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
-<span class="p">])</span>
-</pre></div>
-</div>
-<p>you can alternatively specify</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
-</pre></div>
-</div>
-</dd>
-<dt>A tuple of two arrays, with respective shapes (n, k0) and (k1,):</dt><dd><p>A concatenation of the previous two. For example, when you need a full matrix</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
-    <span class="p">[</span><span class="n">u00</span><span class="p">,</span> <span class="n">u01</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
-    <span class="p">[</span><span class="n">u10</span><span class="p">,</span> <span class="n">u11</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> 
-    <span class="p">[</span><span class="n">u20</span><span class="p">,</span> <span class="n">u21</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> 
-    <span class="p">[</span><span class="n">u30</span><span class="p">,</span> <span class="n">u31</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
-<span class="p">])</span>
-</pre></div>
-</div>
-<p>you can alternatively specify</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
-    <span class="p">[</span><span class="n">u00</span><span class="p">,</span> <span class="n">u01</span><span class="p">],</span>
-    <span class="p">[</span><span class="n">u10</span><span class="p">,</span> <span class="n">u11</span><span class="p">],</span> 
-    <span class="p">[</span><span class="n">u20</span><span class="p">,</span> <span class="n">u21</span><span class="p">],</span> 
-    <span class="p">[</span><span class="n">u30</span><span class="p">,</span> <span class="n">u31</span><span class="p">],</span>
-<span class="p">])</span>
-<span class="n">e</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
-<span class="n">u</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
-</pre></div>
-</div>
-</dd>
-</dl>
-<p>The matrix product of one-hot vectors is internally performed by matrix slicing
-for better performance, so an input of indices is preferred.</p>
-</p></li>
-<li><p><strong>v</strong> – <p>Low-rank update vector(s) <span class="math notranslate nohighlight">\(v\)</span>. The acceptable inputs are similar to <code class="docutils literal notranslate"><span class="pre">u</span></code>.
-When the input is a tuple of two arrays <code class="docutils literal notranslate"><span class="pre">v</span> <span class="pre">=</span> <span class="pre">(x,</span> <span class="pre">e)</span></code>, for convenience
-the concatenation order is reversely given by <code class="docutils literal notranslate"><span class="pre">jnp.concatenate((ve,</span> <span class="pre">vx),</span> <span class="pre">axis=1)</span></code>.
-Therefore, when you need</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">v</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
-    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">v00</span><span class="p">,</span> <span class="n">v01</span><span class="p">],</span>
-    <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">v10</span><span class="p">,</span> <span class="n">v11</span><span class="p">],</span> 
-    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">v20</span><span class="p">,</span> <span class="n">u21</span><span class="p">],</span> 
-    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">v30</span><span class="p">,</span> <span class="n">v31</span><span class="p">],</span>
-<span class="p">])</span>
-</pre></div>
-</div>
-<p>you can alternatively specify</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
-    <span class="p">[</span><span class="n">v00</span><span class="p">,</span> <span class="n">v01</span><span class="p">],</span>
-    <span class="p">[</span><span class="n">v10</span><span class="p">,</span> <span class="n">v11</span><span class="p">],</span> 
-    <span class="p">[</span><span class="n">v20</span><span class="p">,</span> <span class="n">v21</span><span class="p">],</span> 
-    <span class="p">[</span><span class="n">v30</span><span class="p">,</span> <span class="n">v31</span><span class="p">],</span>
-<span class="p">])</span>
-<span class="n">e</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
-<span class="n">u</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
-</pre></div>
-</div>
-</p></li>
+<li><p><strong>Ainv</strong> – Inverse of the original matrix <span class="math notranslate nohighlight">\(A_0^{-1}\)</span> with shape (n, n)</p></li>
+<li><p><strong>u</strong> – Low-rank update vector(s) <span class="math notranslate nohighlight">\(u\)</span>. See the note below for details.</p></li>
+<li><p><strong>v</strong> – Low-rank update vector(s) <span class="math notranslate nohighlight">\(v\)</span>. See the note below for details.</p></li>
 <li><p><strong>return_update</strong> – Whether the new matrix inverse <span class="math notranslate nohighlight">\(A_1^{-1}\)</span> should be returned,
 defaul to False.</p></li>
 </ul>
@@ -563,6 +496,66 @@ the time and memory cost. For instance,</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
+<p>We often need to define <code class="docutils literal notranslate"><span class="pre">u</span></code> and <code class="docutils literal notranslate"><span class="pre">v</span></code> as one-hot vectors, for instance,
+<code class="docutils literal notranslate"><span class="pre">v</span> <span class="pre">=</span> <span class="pre">jnp.array([0,</span> <span class="pre">1,</span> <span class="pre">0,</span> <span class="pre">0])</span></code>. In this case, the matrix product like  <code class="docutils literal notranslate"><span class="pre">Ainv</span> <span class="pre">&#64;</span> <span class="pre">v</span></code> 
+can be alternatively performed by <code class="docutils literal notranslate"><span class="pre">Ainv[:,</span> <span class="pre">1]</span></code> to achieve great acceleration.</p>
+<p>Therefore, we allow <code class="docutils literal notranslate"><span class="pre">u</span></code> and <code class="docutils literal notranslate"><span class="pre">v</span></code> to be provided not only by dense arrays,
+but also by one-hot indeces. The acceptable inputs are listed below.</p>
+<dl>
+<dt>An array with shape (n,) or (n, k):</dt><dd><p>Dense array of <code class="docutils literal notranslate"><span class="pre">u</span></code> or <code class="docutils literal notranslate"><span class="pre">v</span></code>.</p>
+</dd>
+<dt>An integer or array of integers with size k:</dt><dd><p>One-hot indices. The full array is defined as
+<code class="docutils literal notranslate"><span class="pre">u_full</span> <span class="pre">=</span> <span class="pre">jnp.zeros((n,</span> <span class="pre">k)).at[u,</span> <span class="pre">jnp.arange(k)].set(1)</span></code> and similarly for <code class="docutils literal notranslate"><span class="pre">v</span></code>.
+For example, when you need a full matrix</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> 
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> 
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+<p>you can alternatively specify</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd>
+<dt>A tuple of two arrays with respective shapes (n, k0) and (k1,):</dt><dd><p>A concatenation of the previous two. For example, when you need a full matrix</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">u</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+    <span class="p">[</span><span class="n">x00</span><span class="p">,</span> <span class="n">x01</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">x10</span><span class="p">,</span> <span class="n">x11</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> 
+    <span class="p">[</span><span class="n">x20</span><span class="p">,</span> <span class="n">x21</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> 
+    <span class="p">[</span><span class="n">x30</span><span class="p">,</span> <span class="n">x31</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+<p>you can alternatively specify</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+    <span class="p">[</span><span class="n">x00</span><span class="p">,</span> <span class="n">x01</span><span class="p">],</span>
+    <span class="p">[</span><span class="n">x10</span><span class="p">,</span> <span class="n">x11</span><span class="p">],</span> 
+    <span class="p">[</span><span class="n">x20</span><span class="p">,</span> <span class="n">x21</span><span class="p">],</span> 
+    <span class="p">[</span><span class="n">x30</span><span class="p">,</span> <span class="n">x31</span><span class="p">],</span>
+<span class="p">])</span>
+<span class="n">e</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">u</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>As discussed in the note below, we usually need the one-hot vectors of <code class="docutils literal notranslate"><span class="pre">v</span></code>
+to be on the left of dense vectors. Therefore, when we similarly define
+<code class="docutils literal notranslate"><span class="pre">v</span> <span class="pre">=</span> <span class="pre">(x,</span> <span class="pre">e)</span></code>, it actually represents a different array</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">v</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">x00</span><span class="p">,</span> <span class="n">x01</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">x10</span><span class="p">,</span> <span class="n">x11</span><span class="p">],</span> 
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">x20</span><span class="p">,</span> <span class="n">x21</span><span class="p">],</span> 
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">x30</span><span class="p">,</span> <span class="n">x31</span><span class="p">],</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</div>
+<div class="admonition-example admonition">
+<p class="admonition-title">Example</p>
 <p>Here are examples of how to define <code class="docutils literal notranslate"><span class="pre">u</span></code> and <code class="docutils literal notranslate"><span class="pre">v</span></code> before calling <code class="docutils literal notranslate"><span class="pre">det_lru(Ainv,</span> <span class="pre">u,</span> <span class="pre">v)</span></code>.
 Keep in mind that the low-rank update we need takes the form</p>
 <div class="math notranslate nohighlight">
