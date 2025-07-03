@@ -14,17 +14,46 @@ def _check_mat(mat: Array) -> None:
         raise ValueError(f"Expect input matrix shape (n, n), got {mat.shape}.")
 
 
+def _check_u_shape_dtype(
+    u: Union[Array, int], n: int, dtype: Optional[jnp.dtype] = None
+) -> Array:
+    u = jnp.asarray(u)
+    if dtype is not None and not jnp.issubdtype(u.dtype, dtype):
+        raise ValueError(f"Expect input u to be of dtype {dtype}, but got {u.dtype}.")
+
+    if jnp.issubdtype(u.dtype, jnp.integer):
+        if u.ndim > 1:
+            raise ValueError(
+                f"Expect a 0-D or 1-D integer array, but got {u.ndim}-D array."
+            )
+        u = jnp.atleast_1d(u)
+    else:
+        if u.shape[0] != n or u.ndim > 2:
+            raise ValueError(
+                f"Expect input u shape (n,) or (n, k), got {u.shape} with n={n}."
+            )
+        u = u.reshape(n, -1)
+
+    return u
+
+
 def _standardize_uv(
     u: _LowRankVecInput, n: int, dtype: jnp.dtype
 ) -> Tuple[Array, Array]:
     if isinstance(u, ArrayLike):
         u = jnp.asarray(u)
         if jnp.issubdtype(u.dtype, jnp.integer):
-            u = (jnp.empty((n, 0), dtype), u.flatten())
+            u = _check_u_shape_dtype(u, n)
+            u = (jnp.empty((n, 0), dtype), u)
         else:
-            u = (u.reshape(n, -1), jnp.array([], dtype=jnp.int32))
+            u = _check_u_shape_dtype(u, n, dtype)
+            u = (u, jnp.array([], dtype=jnp.int32))
     elif isinstance(u, Sequence):
-        u = (jnp.asarray(u[0]).reshape(n, -1), jnp.asarray(u[1]).flatten())
+        if len(u) != 2:
+            raise ValueError(f"Expect input u to be a tuple of two arrays, got {u}.")
+        x = _check_u_shape_dtype(u[0], n, dtype)
+        e = _check_u_shape_dtype(u[1], n, jnp.integer)
+        u = (x, e)
     else:
         raise ValueError(f"Got unsupported u or v data type {type(u)}.")
     return u
@@ -442,7 +471,7 @@ def det_lru_delayed(
     :param current_delay:
         The current iterations :math:`\tau` of delayed updates,
         must be specified when ``return_update`` is True.
-        As python starts counting at 0, the actual :math:`\tau` value is given by 
+        As python starts counting at 0, the actual :math:`\tau` value is given by
         ``current_delay + 1``.
 
     :return:
