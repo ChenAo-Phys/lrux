@@ -69,12 +69,24 @@ def _check_uv(u: Tuple[Array, Array], v: Tuple[Array, Array]) -> None:
 
 
 def _get_R(Ainv: Array, u: Tuple[Array, Array], v: Tuple[Array, Array]) -> Array:
-    xu_Ainv_xv = jnp.einsum("nk,nm,ml->kl", u[0], Ainv, v[0])
-    eu_Ainv_xv = Ainv[u[1]] @ v[0]
-    xu_Ainv_ev = u[0].T @ Ainv[:, v[1]]
-    eu_Ainv_ev = Ainv[u[1], :][:, v[1]]
+    if u[0].shape[1] <= v[0].shape[1]:
+        xu_Ainv = u[0].T @ Ainv
+        xu_Ainv_xv = xu_Ainv @ v[0]
+        xu_Ainv_ev = xu_Ainv[:, v[1]]
+        eu_Ainv = Ainv[u[1], :]
+        eu_Ainv_xv = eu_Ainv @ v[0]
+        eu_Ainv_ev = eu_Ainv[:, v[1]]
+    else:
+        Ainv_xv = Ainv @ v[0]
+        xu_Ainv_xv = u[0].T @ Ainv_xv
+        eu_Ainv_xv = Ainv_xv[u[1], :]
+        Ainv_ev = Ainv[:, v[1]]
+        xu_Ainv_ev = u[0].T @ Ainv_ev
+        eu_Ainv_ev = Ainv_ev[u[1], :]
+
     uT_Ainv_v = jnp.block([[xu_Ainv_ev, xu_Ainv_xv], [eu_Ainv_ev, eu_Ainv_xv]])
-    return uT_Ainv_v.at[jnp.diag_indices_from(uT_Ainv_v)].add(1)
+    I = jnp.eye(uT_Ainv_v.shape[0], dtype=Ainv.dtype)
+    return I + uT_Ainv_v
 
 
 def _det_and_lufac(R: Array) -> Tuple[Array, Tuple[Array, Array]]:
@@ -86,16 +98,36 @@ def _det_and_lufac(R: Array) -> Tuple[Array, Tuple[Array, Array]]:
     return det, (lu, pivot)
 
 
-def _update_Ainv(
-    Ainv: Array,
-    u: Tuple[Array, Array],
-    v: Tuple[Array, Array],
-    lu_and_piv: Tuple[Array, Array],
+def _det_lru_no_update(
+    Ainv: Array, u: Tuple[Array, Array], v: Tuple[Array, Array]
 ) -> Array:
-    uT_Ainv = jnp.concatenate((u[0].T @ Ainv, Ainv[u[1], :]), axis=0)
-    Rinv_uT_Ainv = jax.scipy.linalg.lu_solve(lu_and_piv, uT_Ainv)
-    Ainv_v = jnp.concatenate((Ainv[:, v[1]], Ainv @ v[0]), axis=1)
-    return Ainv - Ainv_v @ Rinv_uT_Ainv
+    R = _get_R(Ainv, u, v)
+    ratio = jnp.linalg.det(R)
+    return ratio
+
+
+def _det_lru_update(
+    Ainv: Array, u: Tuple[Array, Array], v: Tuple[Array, Array]
+) -> Tuple[Array, Array]:
+    xu_Ainv = u[0].T @ Ainv
+    eu_Ainv = Ainv[u[1], :]
+    Ainv_xv = Ainv @ v[0]
+    Ainv_ev = Ainv[:, v[1]]
+
+    xu_Ainv_xv = xu_Ainv @ v[0]
+    xu_Ainv_ev = xu_Ainv[:, v[1]]
+    eu_Ainv_xv = Ainv_xv[u[1], :]
+    eu_Ainv_ev = eu_Ainv[:, v[1]]
+    uT_Ainv_v = jnp.block([[xu_Ainv_ev, xu_Ainv_xv], [eu_Ainv_ev, eu_Ainv_xv]])
+    I = jnp.eye(uT_Ainv_v.shape[0], dtype=Ainv.dtype)
+    R = I + uT_Ainv_v
+    ratio, lufac = _det_and_lufac(R)
+
+    uT_Ainv = jnp.concatenate((xu_Ainv, eu_Ainv), axis=0)
+    Rinv_uT_Ainv = jax.scipy.linalg.lu_solve(lufac, uT_Ainv)
+    Ainv_v = jnp.concatenate((Ainv_ev, Ainv_xv), axis=1)
+    Ainv -= Ainv_v @ Rinv_uT_Ainv
+    return ratio, Ainv
 
 
 def det_lru(
@@ -327,13 +359,10 @@ def det_lru(
     v = _standardize_uv(v, Ainv.shape[0], Ainv.dtype)
     _check_uv(u, v)
 
-    R = _get_R(Ainv, u, v)
-    ratio, lufac = _det_and_lufac(R)
     if return_update:
-        Ainv = _update_Ainv(Ainv, u, v, lufac)
-        return ratio, Ainv
+        return _det_lru_update(Ainv, u, v)
     else:
-        return ratio
+        return _det_lru_no_update(Ainv, u, v)
 
 
 class DetCarrier(NamedTuple):
@@ -387,47 +416,76 @@ def _update_ab(a: Array, new_a: Array, current_delay: int) -> Array:
     return a.at[current_delay, :, :k].set(new_a)
 
 
-def _get_delayed_output(
+def _det_lru_delayed_no_update(
     carrier: DetCarrier,
     u: Tuple[Array, Array],
     v: Tuple[Array, Array],
-    return_update: bool,
     current_delay: int,
-) -> Union[Array, Tuple[Array, Array]]:
+) -> jax.Array:
     Ainv = carrier.Ainv
     a = carrier.a[:current_delay]
     b = carrier.b[:current_delay]
-    R0 = _get_R(Ainv, u, v)
+    R = _get_R(Ainv, u, v)
 
     xuT_a = jnp.einsum("nk,tnl->tkl", u[0], a)
     euT_a = a[:, u[1], :]
     uT_a = jnp.concatenate((xuT_a, euT_a), axis=1)
-
     xvT_b = jnp.einsum("nk,tnl->tkl", v[0], b)
     evT_b = b[:, v[1], :]
     vT_b = jnp.concatenate((evT_b, xvT_b), axis=1)
 
+    R -= jnp.einsum("tkl,tml->km", uT_a, vT_b)
+    ratio = jnp.linalg.det(R)
+    return ratio
+
+
+def _det_lru_delayed_update(
+    carrier: DetCarrier,
+    u: Tuple[Array, Array],
+    v: Tuple[Array, Array],
+    current_delay: int,
+) -> Tuple[Array, DetCarrier]:
+    Ainv = carrier.Ainv
+    a = carrier.a[:current_delay]
+    b = carrier.b[:current_delay]
+
+    xu_Ainv = u[0].T @ Ainv
+    eu_Ainv = Ainv[u[1], :]
+    Ainv_xv = Ainv @ v[0]
+    Ainv_ev = Ainv[:, v[1]]
+
+    xu_Ainv_xv = xu_Ainv @ v[0]
+    xu_Ainv_ev = xu_Ainv[:, v[1]]
+    eu_Ainv_xv = Ainv_xv[u[1], :]
+    eu_Ainv_ev = eu_Ainv[:, v[1]]
+    uT_Ainv_v = jnp.block([[xu_Ainv_ev, xu_Ainv_xv], [eu_Ainv_ev, eu_Ainv_xv]])
+    I = jnp.eye(uT_Ainv_v.shape[0], dtype=Ainv.dtype)
+    R0 = I + uT_Ainv_v
+
+    xuT_a = jnp.einsum("nk,tnl->tkl", u[0], a)
+    euT_a = a[:, u[1], :]
+    uT_a = jnp.concatenate((xuT_a, euT_a), axis=1)
+    xvT_b = jnp.einsum("nk,tnl->tkl", v[0], b)
+    evT_b = b[:, v[1], :]
+    vT_b = jnp.concatenate((evT_b, xvT_b), axis=1)
     R = R0 - jnp.einsum("tkl,tml->km", uT_a, vT_b)
     ratio, lufac = _det_and_lufac(R)
 
-    if return_update:
-        a0 = jnp.concatenate((Ainv[:, v[1]], Ainv @ v[0]), axis=1)
-        new_a = a0 - jnp.einsum("tnk,tlk->nl", a, vT_b)
-        bT0 = jnp.concatenate((u[0].T @ Ainv, Ainv[u[1], :]), axis=0)
-        new_bT = bT0 - jnp.einsum("tkl,tnl->kn", uT_a, b)
-        new_bT = jax.scipy.linalg.lu_solve(lufac, new_bT)
+    a0 = jnp.concatenate((Ainv_ev, Ainv_xv), axis=1)
+    new_a = a0 - jnp.einsum("tnk,tlk->nl", a, vT_b)
+    bT0 = jnp.concatenate((xu_Ainv, eu_Ainv), axis=0)
+    new_bT = bT0 - jnp.einsum("tkl,tnl->kn", uT_a, b)
+    new_bT = jax.scipy.linalg.lu_solve(lufac, new_bT)
 
-        a = _update_ab(carrier.a, new_a, current_delay)
-        b = _update_ab(carrier.b, new_bT.T, current_delay)
+    a = _update_ab(carrier.a, new_a, current_delay)
+    b = _update_ab(carrier.b, new_bT.T, current_delay)
 
-        if current_delay == a.shape[0] - 1:
-            Ainv -= jnp.einsum("tnk,tmk->nm", a, b)
-            carrier = DetCarrier(Ainv, jnp.zeros_like(a), jnp.zeros_like(b))
-        else:
-            carrier = DetCarrier(Ainv, a, b)
-        return ratio, carrier
+    if current_delay == a.shape[0] - 1:
+        Ainv -= jnp.einsum("tnk,tmk->nm", a, b)
+        carrier = DetCarrier(Ainv, jnp.zeros_like(a), jnp.zeros_like(b))
     else:
-        return ratio
+        carrier = DetCarrier(Ainv, a, b)
+    return ratio, carrier
 
 
 def det_lru_delayed(
@@ -587,4 +645,7 @@ def det_lru_delayed(
     v = _standardize_uv(v, Ainv.shape[0], Ainv.dtype)
     _check_uv(u, v)
 
-    return _get_delayed_output(carrier, u, v, return_update, current_delay)
+    if return_update:
+        return _det_lru_delayed_update(carrier, u, v, current_delay)
+    else:
+        return _det_lru_delayed_no_update(carrier, u, v, current_delay)

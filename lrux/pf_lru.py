@@ -6,32 +6,9 @@ from .det_lru import _LowRankVecInput, _standardize_uv, _update_ab
 from .pfaffian import skew_eye, pf
 
 
-def _check_mat(mat: Array) -> Array:
+def _check_mat(mat: Array) -> None:
     if mat.ndim != 2 or mat.shape[0] != mat.shape[1] or mat.shape[0] % 2 == 1:
         raise ValueError(f"Expect input matrix shape (2n, 2n), got {mat.shape}.")
-    return (mat - mat.T) / 2
-
-
-def _get_R(Ainv: Array, u: Tuple[Array, Array]) -> Array:
-    xu_Ainv_xu = jnp.einsum("nk,nm,ml->kl", u[0], Ainv, u[0])
-    xu_Ainv_eu = u[0].T @ Ainv[:, u[1]]
-    eu_Ainv_eu = Ainv[u[1], :][:, u[1]]
-    uT_Ainv_u = jnp.block([[xu_Ainv_xu, xu_Ainv_eu], [-xu_Ainv_eu.T, eu_Ainv_eu]])
-    J = skew_eye(uT_Ainv_u.shape[0] // 2, Ainv.dtype)
-    R = uT_Ainv_u + J
-    return (R - R.T) / 2  # ensure skew-symmetric
-
-
-def _update_Ainv(Ainv: Array, u: Tuple[Array, Array], R: Array) -> Array:
-    Ainv_u = jnp.concatenate((Ainv @ u[0], Ainv[:, u[1]]), axis=1)
-    if R.shape[0] == 2:
-        Ainv_u1, Ainv_u2 = Ainv_u.T
-        outer = jnp.outer(Ainv_u1, Ainv_u2)
-        Ainv -= (outer - outer.T) / R[0, 1]
-    else:
-        Rinv_Ainv_u = jax.scipy.linalg.solve(R, Ainv_u.T)
-        Ainv += Ainv_u @ Rinv_Ainv_u
-    return (Ainv - Ainv.T) / 2
 
 
 def pf_lru(
@@ -170,18 +147,35 @@ def pf_lru(
             e = jnp.array([1, 3])
             u = (x, e)
     """
-    Ainv = _check_mat(Ainv)
+    _check_mat(Ainv)
     u = _standardize_uv(u, Ainv.shape[0], Ainv.dtype)
     k = u[0].shape[1] + u[1].size
     if k % 2 == 1:
         raise ValueError(f"The input u should have even rank, got rank {k}.")
+    
+    xu_Ainv = u[0].T @ Ainv
+    xu_Ainv_xu = xu_Ainv @ u[0]
+    xu_Ainv_eu = xu_Ainv[:, u[1]]
+    eu_Ainv = Ainv[u[1], :]
+    eu_Ainv_eu = eu_Ainv[:, u[1]]
+    uT_Ainv_u = jnp.block([[xu_Ainv_xu, xu_Ainv_eu], [-xu_Ainv_eu.T, eu_Ainv_eu]])
+    J = skew_eye(uT_Ainv_u.shape[0] // 2, Ainv.dtype)
+    R = J + uT_Ainv_u
 
-    R = _get_R(Ainv, u)
     pfR = pf(R)
     k_half = k // 2
     ratio = jnp.where((k_half * (k_half - 1) // 2) % 2 == 0, pfR, -pfR)
+
     if return_update:
-        Ainv = _update_Ainv(Ainv, u, R)
+        u_Ainv = jnp.concatenate((xu_Ainv, eu_Ainv), axis=0)
+        if k == 2:
+            u1_Ainv, u2_Ainv = u_Ainv
+            outer = jnp.outer(u1_Ainv, u2_Ainv)
+            Ainv -= 2 * outer / R[0, 1]
+        else:
+            Rinv_Ainv_u = jax.scipy.linalg.solve(R, u_Ainv)
+            Ainv += u_Ainv.T @ Rinv_Ainv_u
+        Ainv = (Ainv - Ainv.T) / 2  # ensure skew-symmetry for better stability
         return ratio, Ainv
     else:
         return ratio
@@ -221,7 +215,7 @@ def init_pf_carrier(A: Array, max_delay: int, max_rank: int = 2) -> PfCarrier:
             "`max_delay` should be a positive integer. "
             "Otherwise, please use `pf_lru` for non-delayed updates."
         )
-    A = _check_mat(A)
+    _check_mat(A)
     Ainv = jnp.linalg.inv(A)
     Ainv = (Ainv - Ainv.T) / 2  # ensure skew-symmetric
     a = jnp.zeros((max_delay, A.shape[0], max_rank), A.dtype)
@@ -233,8 +227,7 @@ def _get_delayed_updates(Ainv: Array, a: Array, Rinv: Array) -> Array:
     if Rinv.shape[-1] == 2:
         a1 = a[:, :, 0]
         a2 = a[:, :, 1]
-        outer = jnp.einsum("tn,t,tm->nm", a1, Rinv[:, 0, 1], a2)
-        update = outer - outer.T
+        update = 2 * jnp.einsum("tn,t,tm->nm", a1, Rinv[:, 0, 1], a2)
     else:
         update = jnp.einsum("tnj,tjk,tmk->nm", a, Rinv, a)
 
@@ -244,26 +237,35 @@ def _get_delayed_updates(Ainv: Array, a: Array, Rinv: Array) -> Array:
 
 def _get_delayed_output(
     carrier: PfCarrier, u: Tuple[Array, Array], return_update: bool, current_delay: int
-) -> Union[Array, Tuple[Array, Array]]:
+) -> Union[Array, Tuple[Array, PfCarrier]]:
+    k = u[0].shape[1] + u[1].size
+    if k % 2 == 1:
+        raise ValueError(f"The input u should have even rank, got rank {k}.")
+    
     Ainv = carrier.Ainv
     a = carrier.a[:current_delay]
     Rinv = carrier.Rinv[:current_delay]
-    R0 = _get_R(Ainv, u)
+
+    xu_Ainv = u[0].T @ Ainv
+    xu_Ainv_xu = xu_Ainv @ u[0]
+    xu_Ainv_eu = xu_Ainv[:, u[1]]
+    eu_Ainv = Ainv[u[1], :]
+    eu_Ainv_eu = eu_Ainv[:, u[1]]
+    uT_Ainv_u = jnp.block([[xu_Ainv_xu, xu_Ainv_eu], [-xu_Ainv_eu.T, eu_Ainv_eu]])
+    J = skew_eye(uT_Ainv_u.shape[0] // 2, Ainv.dtype)
+    R = J + uT_Ainv_u
 
     xT_a = jnp.einsum("nk,tnl->tkl", u[0], a)
     eT_a = a[:, u[1], :]
     uT_a = jnp.concatenate((xT_a, eT_a), axis=1)
+    R += jnp.einsum("tjk,tkl,tml->jm", uT_a, Rinv, uT_a)
 
-    R = R0 + jnp.einsum("tjk,tkl,tml->jm", uT_a, Rinv, uT_a)
     pfR = pf(R)
-    k = u[0].shape[1] + u[1].size
-    if k % 2 == 1:
-        raise ValueError(f"The input u should have even rank, got rank {k}.")
     k_half = k // 2
     ratio = jnp.where((k_half * (k_half - 1) // 2) % 2 == 0, pfR, -pfR)
 
     if return_update:
-        a0 = jnp.concatenate((Ainv @ u[0], Ainv[:, u[1]]), axis=1)
+        a0 = -jnp.concatenate((xu_Ainv, eu_Ainv), axis=0).T
         new_a = a0 + jnp.einsum("tnj,tjk,tlk->nl", a, Rinv, uT_a)
         a = _update_ab(carrier.a, new_a, current_delay)
 
