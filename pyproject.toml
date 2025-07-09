@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lrux"
-version = "0.1.1"
+version = "0.1.2"
 description = "Fast low-rank updates (LRU) of matrix determinants and pfaffians in JAX"
 authors = [
     { name = "Ao Chen", email = "chenao.phys@gmail.com" },

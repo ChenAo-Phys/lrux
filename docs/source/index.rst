@@ -29,6 +29,7 @@ Low-rank update of determinants
 
    det_lru
    init_det_carrier
+   merge_det_delays
    det_lru_delayed
 
 
@@ -40,9 +41,9 @@ Low-rank update of pfaffians
 
    pf_lru
    init_pf_carrier
+   merge_pf_delays
    pf_lru_delayed
 
-    
 
 Pfaffian functions
 -------------------------------

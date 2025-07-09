@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>lrux.det_lru_delayed &#8212; lrux 0.1.1 documentation</title>
+    <title>lrux.det_lru_delayed &#8212; lrux 0.1.2 documentation</title>
   
   
   
@@ -30,7 +30,7 @@
   <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
 <link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
   
   <!-- So that users can add custom icons -->
   <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
@@ -38,7 +38,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
 
-    <script src="_static/documentation_options.js?v=a58bc63e"></script>
+    <script src="_static/documentation_options.js?v=92734c54"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -47,7 +47,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="lrux.pf_lru" href="lrux.pf_lru.html" />
-    <link rel="prev" title="lrux.init_det_carrier" href="lrux.init_det_carrier.html" />
+    <link rel="prev" title="lrux.merge_det_delays" href="lrux.merge_det_delays.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -112,7 +112,7 @@
   
   
   
-    <p class="title logo__title">lrux 0.1.1 documentation</p>
+    <p class="title logo__title">lrux 0.1.2 documentation</p>
   
 </a></div>
     
@@ -140,6 +140,13 @@
 </li>
 
 
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="lrux.merge_det_delays.html">
+    lrux.merge_det_delays
+  </a>
+</li>
+
+
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="#">
     lrux.det_lru_delayed
@@ -153,13 +160,6 @@
   </a>
 </li>
 
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="lrux.init_pf_carrier.html">
-    lrux.init_pf_carrier
-  </a>
-</li>
-
             <li class="nav-item dropdown">
                 <button class="btn dropdown-toggle nav-item" type="button"
                 data-bs-toggle="dropdown" aria-expanded="false"
@@ -168,6 +168,20 @@
                 </button>
                 <ul id="pst-nav-more-links" class="dropdown-menu">
                     
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="lrux.init_pf_carrier.html">
+    lrux.init_pf_carrier
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="lrux.merge_pf_delays.html">
+    lrux.merge_pf_delays
+  </a>
+</li>
+
+
 <li class=" ">
   <a class="nav-link dropdown-item nav-internal" href="lrux.pf_lru_delayed.html">
     lrux.pf_lru_delayed
@@ -301,6 +315,13 @@
 </li>
 
 
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="lrux.merge_det_delays.html">
+    lrux.merge_det_delays
+  </a>
+</li>
+
+
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="#">
     lrux.det_lru_delayed
@@ -318,6 +339,13 @@
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="lrux.init_pf_carrier.html">
     lrux.init_pf_carrier
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="lrux.merge_pf_delays.html">
+    lrux.merge_pf_delays
   </a>
 </li>
 
@@ -494,14 +522,6 @@ the quantities from the input carrier, and in addition</p>
 \[a_\tau = A_{\tau-1}^{-1} v_\tau = A_0^{-1} v_\tau - \sum_{t=1}^{\tau-1} a_t (b_t^T v_\tau)\]</div>
 <div class="math notranslate nohighlight">
 \[b_\tau = (A_{\tau-1}^{-1})^T u_\tau = (A_0^{-1})^T u_\tau - \sum_{t=1}^{\tau-1} b_t (a_t^T u_\tau)\]</div>
-<p>When <span class="math notranslate nohighlight">\(\tau\)</span> reaches the maximum delayed iterations <span class="math notranslate nohighlight">\(T\)</span>
-specified in <a class="reference internal" href="lrux.init_det_carrier.html#lrux.init_det_carrier" title="lrux.init_det_carrier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_det_carrier</span></code></a>, i.e. <code class="docutils literal notranslate"><span class="pre">current_delay</span> <span class="pre">==</span> <span class="pre">max_delay</span> <span class="pre">-</span> <span class="pre">1</span></code>,
-the current <span class="math notranslate nohighlight">\(A_\tau\)</span> will be set as the new <span class="math notranslate nohighlight">\(A_0\)</span>,
-whose inverse is given by</p>
-<div class="math notranslate nohighlight">
-\[A_\tau^{-1} = A_0^{-1} - \sum_{t=1}^\tau a_t b_t^T\]</div>
-<p>The <code class="docutils literal notranslate"><span class="pre">Ainv</span></code> in <code class="docutils literal notranslate"><span class="pre">new_carrier</span></code> will be replaced by <span class="math notranslate nohighlight">\(A_\tau^{-1}\)</span>, and
-<code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code> will be set to 0.</p>
 </dd>
 </dl>
 </p>
@@ -511,6 +531,13 @@ whose inverse is given by</p>
 <p class="admonition-title">Warning</p>
 <p>This function is only recommended for heavy users who understand why and when
 to use delayed updates. Otherwise, please choose <a class="reference internal" href="lrux.det_lru.html#lrux.det_lru" title="lrux.det_lru"><code class="xref py py-obj docutils literal notranslate"><span class="pre">det_lru</span></code></a>.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>When <code class="docutils literal notranslate"><span class="pre">current_delay</span></code> reaches the maximum delayed iteration, i.e.
+<code class="docutils literal notranslate"><span class="pre">current_delay</span> <span class="pre">==</span> <span class="pre">max_delay</span> <span class="pre">-</span> <span class="pre">1</span></code>, one should call <a class="reference internal" href="lrux.merge_det_delays.html#lrux.merge_det_delays" title="lrux.merge_det_delays"><code class="xref py py-obj docutils literal notranslate"><span class="pre">merge_det_delays</span></code></a>
+to merge the delayed updates in the carrier, and reset the carrier for the next round.
+See the example below for details.</p>
 </div>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
@@ -525,16 +552,16 @@ the memory of <code class="docutils literal notranslate"><span class="pre">carri
 </div>
 </div>
 <p>Here is a complete example of delayed updates.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;JAX_ENABLE_X64&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
 
-<span class="kn">import</span> <span class="nn">random</span>
-<span class="kn">import</span> <span class="nn">jax</span>
-<span class="kn">import</span> <span class="nn">jax.numpy</span> <span class="k">as</span> <span class="nn">jnp</span>
-<span class="kn">import</span> <span class="nn">jax.random</span> <span class="k">as</span> <span class="nn">jr</span>
-<span class="kn">from</span> <span class="nn">lrux</span> <span class="kn">import</span> <span class="n">det_lru_delayed</span><span class="p">,</span> <span class="n">init_det_carrier</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.random</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lrux</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_det_carrier</span><span class="p">,</span> <span class="n">merge_det_delays</span><span class="p">,</span> <span class="n">det_lru_delayed</span>
 
-<span class="k">def</span> <span class="nf">_get_key</span><span class="p">():</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_key</span><span class="p">():</span>
     <span class="n">seed</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="o">**</span><span class="mi">31</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">jr</span><span class="o">.</span><span class="n">key</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
 
@@ -547,6 +574,7 @@ the memory of <code class="docutils literal notranslate"><span class="pre">carri
 <span class="n">detA0</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
 
 <span class="n">lru_fn</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">det_lru_delayed</span><span class="p">,</span> <span class="n">static_argnums</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">donate_argnums</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">merge_fn</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">merge_det_delays</span><span class="p">,</span> <span class="n">donate_argnums</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">):</span>
     <span class="n">current_delay</span> <span class="o">=</span> <span class="n">i</span> <span class="o">%</span> <span class="n">max_delay</span>
@@ -554,6 +582,9 @@ the memory of <code class="docutils literal notranslate"><span class="pre">carri
     <span class="n">u</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">_get_key</span><span class="p">(),</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">),</span> <span class="n">dtype</span><span class="p">)</span>
     <span class="n">v</span> <span class="o">=</span> <span class="n">jr</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">_get_key</span><span class="p">(),</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">),</span> <span class="n">dtype</span><span class="p">)</span>
     <span class="n">ratio</span><span class="p">,</span> <span class="n">carrier</span> <span class="o">=</span> <span class="n">lru_fn</span><span class="p">(</span><span class="n">carrier</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="n">current_delay</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">current_delay</span> <span class="o">==</span> <span class="n">max_delay</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">carrier</span> <span class="o">=</span> <span class="n">merge_fn</span><span class="p">(</span><span class="n">carrier</span><span class="p">)</span>
 
     <span class="c1"># verify the low-rank update result</span>
     <span class="n">A</span> <span class="o">+=</span> <span class="n">v</span> <span class="o">@</span> <span class="n">u</span><span class="o">.</span><span class="n">T</span>
@@ -577,12 +608,12 @@ the memory of <code class="docutils literal notranslate"><span class="pre">carri
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="lrux.init_det_carrier.html"
+       href="lrux.merge_det_delays.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">lrux.init_det_carrier</p>
+        <p class="prev-next-title">lrux.merge_det_delays</p>
       </div>
     </a>
     <a class="right-next"

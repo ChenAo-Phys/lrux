@@ -376,7 +376,7 @@ def pf_lru_delayed(
     .. warning::
 
         When ``current_delay`` reaches the maximum delayed iteration, i.e.
-        ``current_delay == max_delay - 1``, one should call ``~lrux.merge_pf_delays``
+        ``current_delay == max_delay - 1``, one should call `~lrux.merge_pf_delays`
         to merge the delayed updates in the carrier, and reset the carrier for the next round.
         See the example below for details.
 

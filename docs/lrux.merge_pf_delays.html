@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>lrux.init_pf_carrier &#8212; lrux 0.1.2 documentation</title>
+    <title>lrux.merge_pf_delays &#8212; lrux 0.1.2 documentation</title>
   
   
   
@@ -42,12 +42,12 @@
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'lrux.init_pf_carrier';</script>
-    <link rel="canonical" href="https://chenao-phys.github.io/lrux/lrux.init_pf_carrier.html" />
+    <script>DOCUMENTATION_OPTIONS.pagename = 'lrux.merge_pf_delays';</script>
+    <link rel="canonical" href="https://chenao-phys.github.io/lrux/lrux.merge_pf_delays.html" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="lrux.merge_pf_delays" href="lrux.merge_pf_delays.html" />
-    <link rel="prev" title="lrux.pf_lru" href="lrux.pf_lru.html" />
+    <link rel="next" title="lrux.pf_lru_delayed" href="lrux.pf_lru_delayed.html" />
+    <link rel="prev" title="lrux.init_pf_carrier" href="lrux.init_pf_carrier.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -168,15 +168,15 @@
                 </button>
                 <ul id="pst-nav-more-links" class="dropdown-menu">
                     
-<li class=" current active">
-  <a class="nav-link dropdown-item nav-internal" href="#">
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="lrux.init_pf_carrier.html">
     lrux.init_pf_carrier
   </a>
 </li>
 
 
-<li class=" ">
-  <a class="nav-link dropdown-item nav-internal" href="lrux.merge_pf_delays.html">
+<li class=" current active">
+  <a class="nav-link dropdown-item nav-internal" href="#">
     lrux.merge_pf_delays
   </a>
 </li>
@@ -336,15 +336,15 @@
 </li>
 
 
-<li class="nav-item current active">
-  <a class="nav-link nav-internal" href="#">
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="lrux.init_pf_carrier.html">
     lrux.init_pf_carrier
   </a>
 </li>
 
 
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="lrux.merge_pf_delays.html">
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
     lrux.merge_pf_delays
   </a>
 </li>
@@ -459,7 +459,7 @@
         <i class="fa-solid fa-home"></i>
       </a>
     </li>
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">lrux.init_pf_carrier</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">lrux.merge_pf_delays</span></li>
   </ul>
 </nav>
 </div>
@@ -476,33 +476,32 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="lrux-init-pf-carrier">
-<h1>lrux.init_pf_carrier<a class="headerlink" href="#lrux-init-pf-carrier" title="Link to this heading">#</a></h1>
+  <section id="lrux-merge-pf-delays">
+<h1>lrux.merge_pf_delays<a class="headerlink" href="#lrux-merge-pf-delays" title="Link to this heading">#</a></h1>
 <dl class="py function">
-<dt class="sig sig-object py" id="lrux.init_pf_carrier">
-<span class="sig-prename descclassname"><span class="pre">lrux.</span></span><span class="sig-name descname"><span class="pre">init_pf_carrier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_delay</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_rank</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">PfCarrier</span></span></span><a class="headerlink" href="#lrux.init_pf_carrier" title="Link to this definition">#</a></dt>
-<dd><p>Prepare the data and space for <a class="reference internal" href="lrux.pf_lru_delayed.html#lrux.pf_lru_delayed" title="lrux.pf_lru_delayed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pf_lru_delayed</span></code></a>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>A</strong> – The initial skew-symmetric matrix <span class="math notranslate nohighlight">\(A_0\)</span> with shape (n, n).</p></li>
-<li><p><strong>max_delay</strong> – The maximum iterations T of delayed updates, usually chosen to be ~n/10.</p></li>
-<li><p><strong>max_rank</strong> – The maximum rank K in delayed updates, default to 2.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><p>A <code class="docutils literal notranslate"><span class="pre">NamedTuple</span></code> with the following attributes.</p>
-<dl class="simple">
-<dt>Ainv:</dt><dd><p>The initial matrix inverse <span class="math notranslate nohighlight">\(A_0^{-1}\)</span> of shape (n, n).</p>
-</dd>
-<dt>a:</dt><dd><p>The delayed update vectors of shape (T, n, K), initialized to 0</p>
-</dd>
-<dt>Rinv:</dt><dd><p>The delayed update matrices <span class="math notranslate nohighlight">\(R_t^{-1}\)</span> of shape (T, K, K), initialized to 0</p>
-</dd>
-</dl>
-</p>
-</dd>
-</dl>
+<dt class="sig sig-object py" id="lrux.merge_pf_delays">
+<span class="sig-prename descclassname"><span class="pre">lrux.</span></span><span class="sig-name descname"><span class="pre">merge_pf_delays</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">carrier</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PfCarrier</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">PfCarrier</span></span></span><a class="headerlink" href="#lrux.merge_pf_delays" title="Link to this definition">#</a></dt>
+<dd><p>Merge the delayed updates in the carrier.</p>
+<p>When <span class="math notranslate nohighlight">\(\tau\)</span> reaches the maximum delayed iterations <span class="math notranslate nohighlight">\(T\)</span>
+specified in <a class="reference internal" href="lrux.init_pf_carrier.html#lrux.init_pf_carrier" title="lrux.init_pf_carrier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_pf_carrier</span></code></a>, i.e. <code class="docutils literal notranslate"><span class="pre">current_delay</span> <span class="pre">==</span> <span class="pre">max_delay</span> <span class="pre">-</span> <span class="pre">1</span></code>,
+the current <span class="math notranslate nohighlight">\(A_\tau\)</span> should be set as the new <span class="math notranslate nohighlight">\(A_0\)</span>,
+whose inverse is given by</p>
+<div class="math notranslate nohighlight">
+\[A_\tau^{-1} = A_0^{-1} + \sum_{t=1}^\tau a_t R_t^{-1} a_t^T\]</div>
+<p><code class="docutils literal notranslate"><span class="pre">new_carrier.Ainv</span></code> will be replaced by <span class="math notranslate nohighlight">\(A_\tau^{-1}\)</span>, and
+<code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">Rinv</span></code> will be set to 0. See the example in <a class="reference internal" href="lrux.pf_lru_delayed.html#lrux.pf_lru_delayed" title="lrux.pf_lru_delayed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pf_lru_delayed</span></code></a>
+for details.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>This function is compatible with <code class="docutils literal notranslate"><span class="pre">jax.jit</span></code> and <code class="docutils literal notranslate"><span class="pre">jax.vmap</span></code>. 
+We recommend setting <code class="docutils literal notranslate"><span class="pre">donate_argnums=0</span></code> in <code class="docutils literal notranslate"><span class="pre">jax.jit</span></code> to reuse 
+the memory of <code class="docutils literal notranslate"><span class="pre">carrier</span></code> if it’s no longer needed. This helps to greatly reduce 
+the time and memory cost. For instance,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">merge_vmap</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">vmap</span><span class="p">(</span><span class="n">merge_pf_delays</span><span class="p">)</span>
+<span class="n">merge_jit</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">merge_vmap</span><span class="p">,</span> <span class="n">donate_argnums</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
 </dd></dl>
 
 </section>
@@ -518,20 +517,20 @@
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="lrux.pf_lru.html"
+       href="lrux.init_pf_carrier.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">lrux.pf_lru</p>
+        <p class="prev-next-title">lrux.init_pf_carrier</p>
       </div>
     </a>
     <a class="right-next"
-       href="lrux.merge_pf_delays.html"
+       href="lrux.pf_lru_delayed.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">lrux.merge_pf_delays</p>
+        <p class="prev-next-title">lrux.pf_lru_delayed</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -554,7 +553,7 @@
   </div>
   <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lrux.init_pf_carrier"><code class="docutils literal notranslate"><span class="pre">init_pf_carrier()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lrux.merge_pf_delays"><code class="docutils literal notranslate"><span class="pre">merge_pf_delays()</span></code></a></li>
 </ul>
   </nav></div>
 
@@ -562,7 +561,7 @@
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/lrux.init_pf_carrier.rst.txt"
+      <li><a href="_sources/lrux.merge_pf_delays.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div></div>
