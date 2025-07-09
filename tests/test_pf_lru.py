@@ -8,7 +8,7 @@ import random
 import jax
 import jax.numpy as jnp
 import jax.random as jr
-from lrux import pf, skew_eye, pf_lru, init_pf_carrier, pf_lru_delayed
+from lrux import pf, skew_eye, pf_lru, init_pf_carrier, merge_pf_delays, pf_lru_delayed
 
 
 def _get_key():
@@ -115,13 +115,17 @@ def test_multiple_delayed(k, dtype):
     pfA0 = pf(A)
 
     lru_fn = jax.jit(pf_lru_delayed, static_argnums=(2, 3), donate_argnums=0)
+    merge_fn = jax.jit(merge_pf_delays, donate_argnums=0)
 
     for i in range(20):
         current_delay = i % max_delay
         ki = random.randint(0, k // 2) * 2  # ensure ki is even
         u = jr.normal(_get_key(), (n, ki), dtype)
-
         ratio, carrier = lru_fn(carrier, u, True, current_delay)
+
+        if current_delay == max_delay - 1:
+            carrier = merge_fn(carrier)
+
         J = skew_eye(ki // 2, dtype)
         A -= u @ J @ u.T
         pfA1 = pf(A)

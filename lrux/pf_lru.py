@@ -223,16 +223,45 @@ def init_pf_carrier(A: Array, max_delay: int, max_rank: int = 2) -> PfCarrier:
     return PfCarrier(Ainv, a, Rinv)
 
 
-def _get_delayed_updates(Ainv: Array, a: Array, Rinv: Array) -> Array:
-    if Rinv.shape[-1] == 2:
-        a1 = a[:, :, 0]
-        a2 = a[:, :, 1]
-        update = 2 * jnp.einsum("tn,t,tm->nm", a1, Rinv[:, 0, 1], a2)
-    else:
-        update = jnp.einsum("tnj,tjk,tmk->nm", a, Rinv, a)
+def merge_pf_delays(carrier: PfCarrier) -> PfCarrier:
+    r"""
+    Merge the delayed updates in the carrier.
+    
+    When :math:`\tau` reaches the maximum delayed iterations :math:`T`
+    specified in `~lrux.init_pf_carrier`, i.e. ``current_delay == max_delay - 1``,
+    the current :math:`A_\tau` should be set as the new :math:`A_0`,
+    whose inverse is given by
 
-    Ainv += update
-    return (Ainv - Ainv.T) / 2  # ensure skew-symmetric
+    .. math::
+
+        A_\tau^{-1} = A_0^{-1} + \sum_{t=1}^\tau a_t R_t^{-1} a_t^T
+
+    ``new_carrier.Ainv`` will be replaced by :math:`A_\tau^{-1}`, and
+    ``a`` and ``Rinv`` will be set to 0. See the example in `~lrux.pf_lru_delayed`
+    for details.
+
+    .. tip::
+
+        This function is compatible with ``jax.jit`` and ``jax.vmap``. 
+        We recommend setting ``donate_argnums=0`` in ``jax.jit`` to reuse 
+        the memory of ``carrier`` if it's no longer needed. This helps to greatly reduce 
+        the time and memory cost. For instance,
+
+        .. code-block:: python
+
+            merge_vmap = jax.vmap(merge_pf_delays)
+            merge_jit = jax.jit(merge_vmap, donate_argnums=0)
+    """
+    if carrier.Rinv.shape[-1] == 2:
+        a1 = carrier.a[:, :, 0]
+        a2 = carrier.a[:, :, 1]
+        update = 2 * jnp.einsum("tn,t,tm->nm", a1, carrier.Rinv[:, 0, 1], a2)
+    else:
+        update = jnp.einsum("tnj,tjk,tmk->nm", carrier.a, carrier.Rinv, carrier.a)
+
+    Ainv = carrier.Ainv + update
+    Ainv = (Ainv - Ainv.T) / 2  # ensure skew-symmetric
+    return PfCarrier(Ainv, jnp.zeros_like(carrier.a), jnp.zeros_like(carrier.Rinv))
 
 
 def _get_delayed_output(
@@ -277,11 +306,7 @@ def _get_delayed_output(
             new_Rinv = (new_Rinv - new_Rinv.T) / 2  # ensure skew-symmetric
         Rinv = carrier.Rinv.at[current_delay, :k, :k].set(new_Rinv)
 
-        if current_delay == a.shape[0] - 1:
-            Ainv = _get_delayed_updates(Ainv, a, Rinv)
-            carrier = PfCarrier(Ainv, jnp.zeros_like(a), jnp.zeros_like(Rinv))
-        else:
-            carrier = PfCarrier(Ainv, a, Rinv)
+        carrier = PfCarrier(Ainv, a, Rinv)
         return ratio, carrier
     else:
         return ratio
@@ -343,22 +368,17 @@ def pf_lru_delayed(
 
                 a_\tau = A_{\tau-1}^{-1} u_\tau = A_0^{-1} u_\tau + \sum_{t=1}^{\tau-1} a_t R_t^{-1} (a_t^T u_\tau)
 
-            When :math:`\tau` reaches the maximum delayed iterations :math:`T`
-            specified in `~lrux.init_pf_carrier`, i.e. ``current_delay == max_delay - 1``,
-            the current :math:`A_\tau` will be set as the new :math:`A_0`,
-            whose inverse is given by
-
-            .. math::
-
-                A_\tau^{-1} = A_0^{-1} + \sum_{t=1}^\tau a_t R_t^{-1} a_t^T
-
-            The ``Ainv`` in ``new_carrier`` will be replaced by :math:`A_\tau^{-1}`, and
-            ``a`` and ``Rinv`` will be set to 0.
-
     .. warning::
 
         This function is only recommended for heavy users who understand why and when 
         to use delayed updates. Otherwise, please choose `~\lrux.pf_lru`.
+
+    .. warning::
+
+        When ``current_delay`` reaches the maximum delayed iteration, i.e.
+        ``current_delay == max_delay - 1``, one should call ``~lrux.merge_pf_delays``
+        to merge the delayed updates in the carrier, and reset the carrier for the next round.
+        See the example below for details.
 
     .. tip::
 
@@ -385,7 +405,7 @@ def pf_lru_delayed(
         import jax
         import jax.numpy as jnp
         import jax.random as jr
-        from lrux import skew_eye, pf, init_pf_carrier, pf_lru_delayed
+        from lrux import skew_eye, pf, init_pf_carrier, merge_pf_delays, pf_lru_delayed
 
         def _get_key():
             seed = random.randint(0, 2**31 - 1)
@@ -401,13 +421,17 @@ def pf_lru_delayed(
         pfA0 = pf(A)
 
         lru_fn = jax.jit(pf_lru_delayed, static_argnums=(2, 3), donate_argnums=0)
+        merge_fn = jax.jit(merge_pf_delays, donate_argnums=0)
 
         for i in range(20):
             current_delay = i % max_delay
             ki = random.randint(0, k // 2) * 2  # ensure ki is even
             u = jr.normal(_get_key(), (n, ki), dtype)
-
             ratio, carrier = lru_fn(carrier, u, True, current_delay)
+            
+            if current_delay == max_delay - 1:
+                carrier = merge_fn(carrier)
+
             J = skew_eye(ki // 2, dtype)
             A -= u @ J @ u.T
             pfA1 = pf(A)

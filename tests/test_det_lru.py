@@ -8,7 +8,7 @@ import random
 import jax
 import jax.numpy as jnp
 import jax.random as jr
-from lrux import det_lru, det_lru_delayed, init_det_carrier
+from lrux import det_lru, det_lru_delayed, merge_det_delays, init_det_carrier
 
 
 def _get_key():
@@ -118,6 +118,7 @@ def test_multiple_delayed(dtype):
     detA0 = jnp.linalg.det(A)
 
     lru_fn = jax.jit(det_lru_delayed, static_argnums=(3, 4), donate_argnums=0)
+    merge_fn = jax.jit(merge_det_delays, donate_argnums=0)
 
     for i in range(20):
         current_delay = i % max_delay
@@ -125,6 +126,10 @@ def test_multiple_delayed(dtype):
         u = jr.normal(_get_key(), (n, k), dtype)
         v = jr.normal(_get_key(), (n, k), dtype)
         ratio, carrier = lru_fn(carrier, u, v, True, current_delay)
+        
+        if current_delay == max_delay - 1:
+            carrier = merge_fn(carrier)
+
         A += v @ u.T
         detA1 = jnp.linalg.det(A)
         assert jnp.allclose(ratio, detA1 / detA0)

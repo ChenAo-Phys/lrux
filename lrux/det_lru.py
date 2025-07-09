@@ -407,6 +407,39 @@ def init_det_carrier(A: Array, max_delay: int, max_rank: int = 1) -> DetCarrier:
     return DetCarrier(Ainv, a, b)
 
 
+def merge_det_delays(carrier: DetCarrier) -> DetCarrier:
+    r"""
+    Merge the delayed updates in the carrier.
+
+    When :math:`\tau` reaches the maximum delayed iterations :math:`T`
+    specified in `~lrux.init_det_carrier`, i.e. ``current_delay == max_delay - 1``,
+    the current :math:`A_\tau` should be set as the new :math:`A_0`,
+    whose inverse is given by
+
+    .. math::
+
+        A_\tau^{-1} = A_0^{-1} - \sum_{t=1}^\tau a_t b_t^T
+
+    The ``Ainv`` in ``new_carrier`` will be replaced by :math:`A_\tau^{-1}`, and
+    ``a`` and ``b`` will be set to 0. See the example in `~lrux.det_lru_delayed`
+    for details.
+
+    .. tip::
+
+        This function is compatible with ``jax.jit`` and ``jax.vmap``. 
+        We recommend setting ``donate_argnums=0`` in ``jax.jit`` to reuse 
+        the memory of ``carrier`` if it's no longer needed. This helps to greatly reduce 
+        the time and memory cost. For instance,
+
+        .. code-block:: python
+
+            merge_vmap = jax.vmap(merge_det_delays)
+            merge_jit = jax.jit(merge_vmap, donate_argnums=0)
+    """
+    Ainv = carrier.Ainv - jnp.einsum("tnk,tmk->nm", carrier.a, carrier.b)
+    return DetCarrier(Ainv, jnp.zeros_like(carrier.a), jnp.zeros_like(carrier.b))
+
+
 def _update_ab(a: Array, new_a: Array, current_delay: int) -> Array:
     k = new_a.shape[-1]
     if k > a.shape[-1]:
@@ -480,11 +513,7 @@ def _det_lru_delayed_update(
     a = _update_ab(carrier.a, new_a, current_delay)
     b = _update_ab(carrier.b, new_bT.T, current_delay)
 
-    if current_delay == a.shape[0] - 1:
-        Ainv -= jnp.einsum("tnk,tmk->nm", a, b)
-        carrier = DetCarrier(Ainv, jnp.zeros_like(a), jnp.zeros_like(b))
-    else:
-        carrier = DetCarrier(Ainv, a, b)
+    carrier = DetCarrier(Ainv, a, b)
     return ratio, carrier
 
 
@@ -558,22 +587,17 @@ def det_lru_delayed(
 
                 b_\tau = (A_{\tau-1}^{-1})^T u_\tau = (A_0^{-1})^T u_\tau - \sum_{t=1}^{\tau-1} b_t (a_t^T u_\tau)
 
-            When :math:`\tau` reaches the maximum delayed iterations :math:`T`
-            specified in `~lrux.init_det_carrier`, i.e. ``current_delay == max_delay - 1``,
-            the current :math:`A_\tau` will be set as the new :math:`A_0`,
-            whose inverse is given by
-
-            .. math::
-
-                A_\tau^{-1} = A_0^{-1} - \sum_{t=1}^\tau a_t b_t^T
-
-            The ``Ainv`` in ``new_carrier`` will be replaced by :math:`A_\tau^{-1}`, and
-            ``a`` and ``b`` will be set to 0.
-
     .. warning::
 
         This function is only recommended for heavy users who understand why and when
         to use delayed updates. Otherwise, please choose `~\lrux.det_lru`.
+
+    .. warning::
+
+        When ``current_delay`` reaches the maximum delayed iteration, i.e.
+        ``current_delay == max_delay - 1``, one should call ``~lrux.merge_det_delays``
+        to merge the delayed updates in the carrier, and reset the carrier for the next round.
+        See the example below for details.
 
     .. tip::
 
@@ -600,7 +624,7 @@ def det_lru_delayed(
         import jax
         import jax.numpy as jnp
         import jax.random as jr
-        from lrux import det_lru_delayed, init_det_carrier
+        from lrux import init_det_carrier, merge_det_delays, det_lru_delayed
 
         def _get_key():
             seed = random.randint(0, 2**31 - 1)
@@ -615,6 +639,7 @@ def det_lru_delayed(
         detA0 = jnp.linalg.det(A)
 
         lru_fn = jax.jit(det_lru_delayed, static_argnums=(3, 4), donate_argnums=0)
+        merge_fn = jax.jit(merge_det_delays, donate_argnums=0)
 
         for i in range(20):
             current_delay = i % max_delay
@@ -622,6 +647,9 @@ def det_lru_delayed(
             u = jr.normal(_get_key(), (n, k), dtype)
             v = jr.normal(_get_key(), (n, k), dtype)
             ratio, carrier = lru_fn(carrier, u, v, True, current_delay)
+                
+            if current_delay == max_delay - 1:
+                carrier = merge_fn(carrier)
 
             # verify the low-rank update result
             A += v @ u.T
