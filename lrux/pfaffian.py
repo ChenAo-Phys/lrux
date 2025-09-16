@@ -48,6 +48,11 @@ def _pfaffian_direct(A: Array) -> Array:
         A_upper = A[..., idx[0], idx[1]]
         a, b, c, d, e, f = jnp.moveaxis(A_upper, -1, 0)
         return a * f - b * e + d * c
+    
+    else:
+        raise ValueError(
+            f"The direct method only supports matrices with size up to 4, got {n}."
+        )
 
 
 def _householder(x: Array, n: Optional[int] = None) -> Tuple[Array, Array, Array]:
@@ -77,7 +82,7 @@ def _householder(x: Array, n: Optional[int] = None) -> Tuple[Array, Array, Array
 
 
 @jax.custom_jvp
-def _slogpf_householder(A: Array) -> Array:
+def _slogpf_householder(A: Array) -> Tuple[Array, Array]:
     n = A.shape[0]
 
     def body_fun(i, val):

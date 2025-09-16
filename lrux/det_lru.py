@@ -1,6 +1,6 @@
 from typing import Optional, Tuple, Union, Sequence, NamedTuple
 from jax import Array
-from jax.typing import ArrayLike
+from jax.typing import ArrayLike, DTypeLike
 import jax
 import jax.numpy as jnp
 from jax._src.numpy import reductions
@@ -15,7 +15,7 @@ def _check_mat(mat: Array) -> None:
 
 
 def _check_u_shape_dtype(
-    u: Union[Array, int], n: int, dtype: Optional[jnp.dtype] = None
+    u: Union[Array, int], n: int, dtype: Optional[DTypeLike] = None
 ) -> Array:
     u = jnp.asarray(u)
     if dtype is not None and not jnp.issubdtype(u.dtype, dtype):
