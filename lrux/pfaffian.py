@@ -1,11 +1,12 @@
 from typing import Tuple, NamedTuple, Optional, Callable
 from jax import Array
+from jax.typing import DTypeLike
 from functools import partial
 import jax
 import jax.numpy as jnp
 
 
-def skew_eye(n: int, dtype: Optional[jnp.dtype] = None) -> Array:
+def skew_eye(n: int, dtype: Optional[DTypeLike] = None) -> Array:
     r"""
     The skew-symmetric identity matrix :math:`J`.
 

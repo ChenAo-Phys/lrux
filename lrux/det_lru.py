@@ -38,7 +38,7 @@ def _check_u_shape_dtype(
 
 
 def _standardize_uv(
-    u: _LowRankVecInput, n: int, dtype: jnp.dtype
+    u: _LowRankVecInput, n: int, dtype: DTypeLike
 ) -> Tuple[Array, Array]:
     if isinstance(u, ArrayLike):
         u = jnp.asarray(u)
@@ -426,9 +426,9 @@ def merge_det_delays(carrier: DetCarrier) -> DetCarrier:
 
     .. tip::
 
-        This function is compatible with ``jax.jit`` and ``jax.vmap``. 
-        We recommend setting ``donate_argnums=0`` in ``jax.jit`` to reuse 
-        the memory of ``carrier`` if it's no longer needed. This helps to greatly reduce 
+        This function is compatible with ``jax.jit`` and ``jax.vmap``.
+        We recommend setting ``donate_argnums=0`` in ``jax.jit`` to reuse
+        the memory of ``carrier`` if it's no longer needed. This helps to greatly reduce
         the time and memory cost. For instance,
 
         .. code-block:: python
@@ -647,7 +647,7 @@ def det_lru_delayed(
             u = jr.normal(_get_key(), (n, k), dtype)
             v = jr.normal(_get_key(), (n, k), dtype)
             ratio, carrier = lru_fn(carrier, u, v, True, current_delay)
-                
+
             if current_delay == max_delay - 1:
                 carrier = merge_fn(carrier)
 
