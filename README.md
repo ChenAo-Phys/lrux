@@ -1,8 +1,33 @@
 <h1 align='center'>lrux</h1>
 
-Fast low-rank update (LRU) of matrix determinants and pfaffians in [JAX](https://github.com/jax-ml/jax)
+<p align="center">
+Fast low-rank updates (LRU) of determinants and Pfaffians in 
+<a href="https://github.com/jax-ml/jax">JAX</a>
+</p>
 
-[📖 Documentation](https://chenao-phys.github.io/lrux/)
+<p align="center">
+<a href="https://chenao-phys.github.io/lrux/">📖 Documentation</a> •
+<a href="https://arxiv.org/abs/2602.05255">📄 Paper</a>
+</p>
+
+---
+
+## Overview
+
+In quantum many-body physics and related numerical fields, one frequently encounters situations where a matrix  
+$\mathbf{A}_1$ differs only slightly from a previously processed matrix $\mathbf{A}_0$.  
+
+Recomputing determinants or Pfaffians from scratch scales as $\mathcal{O}(n^3)$ and quickly becomes a bottleneck.  
+**lrux** provides efficient **low-rank update (LRU)** routines that reduce the cost to $\mathcal{O}(n^2)$ per update, while remaining fully compatible with JAX transformations (`jit`, `vmap`, autodiff).
+
+Typical applications include:
+
+- Variational Monte Carlo (VMC)
+- Auxiliary-field and determinantal QMC
+- Neural network backflow / hidden fermion
+- Any workflow involving repeated local matrix updates
+
+---
 
 ## What's low-rank update?
 
@@ -70,6 +95,7 @@ A1 = A0.at[v, :].add(u)
 assert jnp.isclose(detA1_lru, jnp.linalg.det(A1))
 ```
 
+---
 
 ## Consecutive updates
 
@@ -98,6 +124,7 @@ assert jnp.isclose(detA2_lru, jnp.linalg.det(A2))
 assert jnp.allclose(Ainv, jnp.linalg.inv(A2))
 ```
 
+---
 
 ## What does lrux provide?
 
@@ -110,6 +137,7 @@ The main functions of lrux include `det_lru`, `det_lru_delayed`, `pf_lru`, and `
 
 As the [pfaffian](https://en.wikipedia.org/wiki/Pfaffian) is not directly supported in JAX, we also provide backward-compatible functions `pf` and `slogpf` for pfaffian computations.
 
+---
 
 ## Installation
 
@@ -117,4 +145,22 @@ Requires Python 3.8+ and JAX 0.4.4+
 
 ```
 pip install lrux
+```
+
+---
+
+## Citation
+
+If you use lrux in your research, please cite:
+
+```
+@misc{Chen_lrux,
+      title={lrux: Fast low-rank updates of determinants and Pfaffians in JAX}, 
+      author={Ao Chen and Christopher Roth},
+      year={2026},
+      eprint={2602.05255},
+      archivePrefix={arXiv},
+      primaryClass={cond-mat.str-el},
+      url={https://arxiv.org/abs/2602.05255}, 
+}
 ```
