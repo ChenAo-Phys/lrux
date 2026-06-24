@@ -1,9 +1,17 @@
 from typing import Optional, Tuple, Union, Sequence, NamedTuple
 from jax import Array
-from jax.typing import ArrayLike, DTypeLike
+from jax.typing import DTypeLike
 import jax
 import jax.numpy as jnp
+import numpy as np
 from jax._src.numpy import reductions
+
+
+# Concrete element types of ``jax.typing.ArrayLike``. ``isinstance`` against the
+# ``ArrayLike`` union itself is unreliable: on Python <3.12 it reduces to a
+# subclass check, which misses JAX tracers (e.g. under ``vmap``) since their
+# class is not a subclass of ``jax.Array`` even though instances are.
+_ARRAY_LIKE = (Array, np.ndarray, np.bool_, np.number, bool, int, float, complex)
 
 
 _LowRankVecInput = Union[Array, int, Tuple[Array, Array], Tuple[Array, int]]
@@ -40,7 +48,7 @@ def _check_u_shape_dtype(
 def _standardize_uv(
     u: _LowRankVecInput, n: int, dtype: DTypeLike
 ) -> Tuple[Array, Array]:
-    if isinstance(u, ArrayLike):
+    if isinstance(u, _ARRAY_LIKE):
         u = jnp.asarray(u)
         if jnp.issubdtype(u.dtype, jnp.integer):
             u = _check_u_shape_dtype(u, n)
