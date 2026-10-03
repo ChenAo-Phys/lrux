@@ -1,7 +1,8 @@
 import os
 
 os.environ["JAX_ENABLE_X64"] = "1"
-os.environ["JAX_PLATFORM_NAME"] = "cpu"
+# CPU unless the caller picks a platform: JAX_PLATFORMS=cuda pytest runs the GPU paths
+os.environ.setdefault("JAX_PLATFORMS", "cpu")
 
 import pytest
 import random
@@ -54,7 +55,9 @@ def test_rank_1(n, dtype):
 
 
 @pytest.mark.parametrize("n", [1, 10])
-@pytest.mark.parametrize("kxu, keu, kxv, kev", [(3, 0, 0, 3), (2, 4, 4, 2)])
+@pytest.mark.parametrize(
+    "kxu, keu, kxv, kev", [(3, 0, 0, 3), (2, 4, 4, 2), (20, 14, 14, 20)]
+)
 @pytest.mark.parametrize("dtype", [jnp.float64, jnp.complex128])
 def test_rank_k(n, kxu, keu, kxv, kev, dtype):
     A = jr.normal(_get_key(), (n, n), dtype)
@@ -126,7 +129,7 @@ def test_multiple_delayed(dtype):
         u = jr.normal(_get_key(), (n, k), dtype)
         v = jr.normal(_get_key(), (n, k), dtype)
         ratio, carrier = lru_fn(carrier, u, v, True, current_delay)
-        
+
         if current_delay == max_delay - 1:
             carrier = merge_fn(carrier)
 
@@ -134,3 +137,61 @@ def test_multiple_delayed(dtype):
         detA1 = jnp.linalg.det(A)
         assert jnp.allclose(ratio, detA1 / detA0)
         detA0 = detA1
+
+
+@pytest.mark.parametrize("k", [1, 6])
+@pytest.mark.parametrize("dtype", [jnp.float64, jnp.complex128])
+def test_grad(k, dtype):
+    n = 10
+    A = jr.normal(_get_key(), (n, n), dtype)
+    Ainv = jnp.linalg.inv(A)
+    detA = jnp.linalg.det(A)
+    u = jr.normal(_get_key(), (n, k), dtype)
+    v = jr.normal(_get_key(), (n, k), dtype)
+    du = jr.normal(_get_key(), (n, k), dtype)
+
+    def ratio_lru(u):
+        return det_lru(Ainv, u, v)
+
+    def ratio_ref(u):
+        return jnp.linalg.det(A + v @ u.T) / detA
+
+    def inv_lru(u):
+        return det_lru(Ainv, u, v, True)[1]
+
+    def inv_ref(u):
+        return jnp.linalg.inv(A + v @ u.T)
+
+    for f_lru, f_ref in [(ratio_lru, ratio_ref), (inv_lru, inv_ref)]:
+        out_lru, jvp_lru = jax.jvp(f_lru, (u,), (du,))
+        out_ref, jvp_ref = jax.jvp(f_ref, (u,), (du,))
+        assert jnp.allclose(out_lru, out_ref)
+        assert jnp.allclose(jvp_lru, jvp_ref)
+
+    # the ratio is a polynomial in u, so a central difference is an independent check
+    eps = 1e-6
+    fd = (ratio_ref(u + eps * du) - ratio_ref(u - eps * du)) / (2 * eps)
+    assert jnp.allclose(jax.jvp(ratio_lru, (u,), (du,))[1], fd, atol=1e-6)
+
+
+@pytest.mark.parametrize("k", [5, 8])
+@pytest.mark.parametrize("dtype", [jnp.float64, jnp.complex128])
+def test_delayed_large_rank(k, dtype):
+    """Delayed updates of rank k > 4, where the ratio and R^-1 come from det_inv's
+    kernel (GPU) or LU path: ratios against the direct determinants and the merged
+    inverse against the direct inverse."""
+    n = 16
+    max_delay = 3
+    A = jr.normal(_get_key(), (n, n), dtype) + 4 * jnp.eye(n, dtype=dtype)
+    carrier = init_det_carrier(A, max_delay, k)
+    detA0 = jnp.linalg.det(A)
+    for i in range(max_delay):
+        u = 0.3 * jr.normal(_get_key(), (n, k), dtype)
+        v = 0.3 * jr.normal(_get_key(), (n, k), dtype)
+        ratio, carrier = det_lru_delayed(carrier, u, v, True, i)
+        A = A + v @ u.T
+        detA1 = jnp.linalg.det(A)
+        assert jnp.allclose(ratio, detA1 / detA0)
+        detA0 = detA1
+    carrier = merge_det_delays(carrier)
+    assert jnp.allclose(carrier.Ainv, jnp.linalg.inv(A))

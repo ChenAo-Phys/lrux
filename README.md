@@ -134,14 +134,15 @@ The main functions of lrux include `det_lru`, `det_lru_delayed`, `pf_lru`, and `
 - General rank-k updates
 - Delayed updates
 - `jit` and `vmap` compatibility
+- float32, float64, complex64, and complex128 matrices (the dtypes supported by fermix)
 
-As the [pfaffian](https://en.wikipedia.org/wiki/Pfaffian) is not directly supported in JAX, we also provide backward-compatible functions `pf` and `slogpf` for pfaffian computations.
+The determinants and [pfaffians](https://en.wikipedia.org/wiki/Pfaffian) inside lrux are computed by [fermix](https://github.com/ChenAo-Phys/fermix), which also provides the full `det`, `slogdet`, `pf`, and `slogpf` functions. When the updated inverse is requested, the ratio and the inverse of the small update matrix are computed together: from the explicit polynomial for the smallest ranks, and by one fused Pallas kernel per batch on GPU for ranks up to 32. lrux additionally provides `skew_eye` for the skew-symmetric identity matrix used in pfaffian updates.
 
 ---
 
 ## Installation
 
-Requires Python 3.8+ and JAX 0.4.4+
+Requires Python 3.11+ and JAX 0.7.1+. [fermix](https://github.com/ChenAo-Phys/fermix) is installed automatically as a dependency.
 
 ```
 pip install lrux

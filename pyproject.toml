@@ -4,15 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lrux"
-version = "0.1.3"
+version = "0.2.0"
 description = "Fast low-rank updates (LRU) of matrix determinants and pfaffians in JAX"
 authors = [
     { name = "Ao Chen", email = "chenao.phys@gmail.com" },
     { name = "Christopher Roth", email = "christopher_roth@utexas.edu" }
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dependencies = [
-    "jax>=0.4.4"
+    "jax>=0.7.1",
+    "fermix>=0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -24,3 +25,6 @@ docs = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["lrux*"]
+
+[tool.black]
+target-version = ["py311"]

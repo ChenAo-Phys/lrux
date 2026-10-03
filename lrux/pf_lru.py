@@ -1,14 +1,63 @@
-from typing import Optional, Tuple, Union, NamedTuple
+from typing import Optional, Tuple, Union, NamedTuple, Literal, overload
 from jax import Array
+from jax.typing import DTypeLike
 import jax
 import jax.numpy as jnp
+from ._small_inv import pf_inv, pf_value
 from .det_lru import _LowRankVecInput, _standardize_uv, _update_ab
-from .pfaffian import skew_eye, pf
+
+
+def skew_eye(n: int, dtype: Optional[DTypeLike] = None) -> Array:
+    r"""
+    The skew-symmetric identity matrix :math:`J`.
+
+    :param n:
+        Number of rows in the output divided by 2.
+
+    :param dtype:
+        Optional dtype, default to floating point.
+
+    :return:
+        The skew-symmetric identity matrix of shape (2n, 2n), defined as
+
+        .. math::
+
+            J = \begin{pmatrix}
+                0 & I \\ -I & 0
+            \end{pmatrix}
+    """
+    I = jnp.eye(n, dtype=dtype)
+    O = jnp.zeros((n, n), dtype=dtype)
+    return jnp.block([[O, I], [-I, O]])
 
 
 def _check_mat(mat: Array) -> None:
     if mat.ndim != 2 or mat.shape[0] != mat.shape[1] or mat.shape[0] % 2 == 1:
         raise ValueError(f"Expect input matrix shape (2n, 2n), got {mat.shape}.")
+
+
+@overload
+def pf_lru(
+    Ainv: Array,
+    u: _LowRankVecInput,
+    return_update: Literal[False] = False,
+) -> Array: ...
+
+
+@overload
+def pf_lru(
+    Ainv: Array,
+    u: _LowRankVecInput,
+    return_update: Literal[True],
+) -> Tuple[Array, Array]: ...
+
+
+@overload
+def pf_lru(
+    Ainv: Array,
+    u: _LowRankVecInput,
+    return_update: bool = False,
+) -> Union[Array, Tuple[Array, Array]]: ...
 
 
 def pf_lru(
@@ -152,7 +201,7 @@ def pf_lru(
     k = u[0].shape[1] + u[1].size
     if k % 2 == 1:
         raise ValueError(f"The input u should have even rank, got rank {k}.")
-    
+
     xu_Ainv = u[0].T @ Ainv
     xu_Ainv_xu = xu_Ainv @ u[0]
     xu_Ainv_eu = xu_Ainv[:, u[1]]
@@ -162,19 +211,22 @@ def pf_lru(
     J = skew_eye(uT_Ainv_u.shape[0] // 2, Ainv.dtype)
     R = J + uT_Ainv_u
 
-    pfR = pf(R)
+    if return_update and k != 2:
+        # pfaffian and R^{-1} together (one fused kernel on GPU)
+        pfR, Rinv = pf_inv(R)
+    else:
+        pfR, Rinv = pf_value(R), None
     k_half = k // 2
     ratio = jnp.where((k_half * (k_half - 1) // 2) % 2 == 0, pfR, -pfR)
 
     if return_update:
         u_Ainv = jnp.concatenate((xu_Ainv, eu_Ainv), axis=0)
-        if k == 2:
+        if Rinv is None:  # k == 2
             u1_Ainv, u2_Ainv = u_Ainv
             outer = jnp.outer(u1_Ainv, u2_Ainv)
             Ainv -= 2 * outer / R[0, 1]
         else:
-            Rinv_Ainv_u = jax.scipy.linalg.solve(R, u_Ainv)
-            Ainv += u_Ainv.T @ Rinv_Ainv_u
+            Ainv += u_Ainv.T @ (Rinv @ u_Ainv)
         Ainv = (Ainv - Ainv.T) / 2  # ensure skew-symmetry for better stability
         return ratio, Ainv
     else:
@@ -226,7 +278,7 @@ def init_pf_carrier(A: Array, max_delay: int, max_rank: int = 2) -> PfCarrier:
 def merge_pf_delays(carrier: PfCarrier) -> PfCarrier:
     r"""
     Merge the delayed updates in the carrier.
-    
+
     When :math:`\tau` reaches the maximum delayed iterations :math:`T`
     specified in `~lrux.init_pf_carrier`, i.e. ``current_delay == max_delay - 1``,
     the current :math:`A_\tau` should be set as the new :math:`A_0`,
@@ -242,9 +294,9 @@ def merge_pf_delays(carrier: PfCarrier) -> PfCarrier:
 
     .. tip::
 
-        This function is compatible with ``jax.jit`` and ``jax.vmap``. 
-        We recommend setting ``donate_argnums=0`` in ``jax.jit`` to reuse 
-        the memory of ``carrier`` if it's no longer needed. This helps to greatly reduce 
+        This function is compatible with ``jax.jit`` and ``jax.vmap``.
+        We recommend setting ``donate_argnums=0`` in ``jax.jit`` to reuse
+        the memory of ``carrier`` if it's no longer needed. This helps to greatly reduce
         the time and memory cost. For instance,
 
         .. code-block:: python
@@ -270,7 +322,7 @@ def _get_delayed_output(
     k = u[0].shape[1] + u[1].size
     if k % 2 == 1:
         raise ValueError(f"The input u should have even rank, got rank {k}.")
-    
+
     Ainv = carrier.Ainv
     a = carrier.a[:current_delay]
     Rinv = carrier.Rinv[:current_delay]
@@ -289,7 +341,11 @@ def _get_delayed_output(
     uT_a = jnp.concatenate((xT_a, eT_a), axis=1)
     R += jnp.einsum("tjk,tkl,tml->jm", uT_a, Rinv, uT_a)
 
-    pfR = pf(R)
+    if return_update and k != 2:
+        # pfaffian and R^{-1} together (one fused kernel on GPU)
+        pfR, new_Rinv = pf_inv(R)
+    else:
+        pfR, new_Rinv = pf_value(R), None
     k_half = k // 2
     ratio = jnp.where((k_half * (k_half - 1) // 2) % 2 == 0, pfR, -pfR)
 
@@ -298,11 +354,10 @@ def _get_delayed_output(
         new_a = a0 + jnp.einsum("tnj,tjk,tlk->nl", a, Rinv, uT_a)
         a = _update_ab(carrier.a, new_a, current_delay)
 
-        if k == 2:
+        if new_Rinv is None:  # k == 2
             rinv = -1 / ratio
             new_Rinv = jnp.array([[0, rinv], [-rinv, 0]], dtype=Rinv.dtype)
         else:
-            new_Rinv = jnp.linalg.inv(R)
             new_Rinv = (new_Rinv - new_Rinv.T) / 2  # ensure skew-symmetric
         Rinv = carrier.Rinv.at[current_delay, :k, :k].set(new_Rinv)
 
@@ -310,6 +365,33 @@ def _get_delayed_output(
         return ratio, carrier
     else:
         return ratio
+
+
+@overload
+def pf_lru_delayed(
+    carrier: PfCarrier,
+    u: _LowRankVecInput,
+    return_update: Literal[False] = False,
+    current_delay: Optional[int] = None,
+) -> Array: ...
+
+
+@overload
+def pf_lru_delayed(
+    carrier: PfCarrier,
+    u: _LowRankVecInput,
+    return_update: Literal[True],
+    current_delay: Optional[int] = None,
+) -> Tuple[Array, PfCarrier]: ...
+
+
+@overload
+def pf_lru_delayed(
+    carrier: PfCarrier,
+    u: _LowRankVecInput,
+    return_update: bool = False,
+    current_delay: Optional[int] = None,
+) -> Union[Array, Tuple[Array, PfCarrier]]: ...
 
 
 def pf_lru_delayed(
@@ -343,7 +425,7 @@ def pf_lru_delayed(
     :param current_delay:
         The current iterations :math:`\tau` of delayed updates,
         must be specified when ``return_update`` is True.
-        As python starts counting at 0, the actual :math:`\tau` value is given by 
+        As python starts counting at 0, the actual :math:`\tau` value is given by
         ``current_delay + 1``.
 
     :return:
@@ -370,7 +452,7 @@ def pf_lru_delayed(
 
     .. warning::
 
-        This function is only recommended for heavy users who understand why and when 
+        This function is only recommended for heavy users who understand why and when
         to use delayed updates. Otherwise, please choose `~\lrux.pf_lru`.
 
     .. warning::
@@ -405,7 +487,8 @@ def pf_lru_delayed(
         import jax
         import jax.numpy as jnp
         import jax.random as jr
-        from lrux import skew_eye, pf, init_pf_carrier, merge_pf_delays, pf_lru_delayed
+        from fermix import pf
+        from lrux import skew_eye, init_pf_carrier, merge_pf_delays, pf_lru_delayed
 
         def _get_key():
             seed = random.randint(0, 2**31 - 1)
@@ -428,7 +511,7 @@ def pf_lru_delayed(
             ki = random.randint(0, k // 2) * 2  # ensure ki is even
             u = jr.normal(_get_key(), (n, ki), dtype)
             ratio, carrier = lru_fn(carrier, u, True, current_delay)
-            
+
             if current_delay == max_delay - 1:
                 carrier = merge_fn(carrier)
 

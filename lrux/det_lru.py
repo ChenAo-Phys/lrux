@@ -1,11 +1,10 @@
-from typing import Optional, Tuple, Union, Sequence, NamedTuple
+from typing import Optional, Tuple, Union, Sequence, NamedTuple, Literal, overload
 from jax import Array
 from jax.typing import DTypeLike
 import jax
 import jax.numpy as jnp
 import numpy as np
-from jax._src.numpy import reductions
-
+from ._small_inv import det_inv, det_value
 
 # Concrete element types of ``jax.typing.ArrayLike``. ``isinstance`` against the
 # ``ArrayLike`` union itself is unreliable: on Python <3.12 it reduces to a
@@ -97,20 +96,11 @@ def _get_R(Ainv: Array, u: Tuple[Array, Array], v: Tuple[Array, Array]) -> Array
     return I + uT_Ainv_v
 
 
-def _det_and_lufac(R: Array) -> Tuple[Array, Tuple[Array, Array]]:
-    lu, pivot = jax.scipy.linalg.lu_factor(R)
-    iota = jnp.arange(pivot.size, dtype=pivot.dtype)
-    parity = reductions.count_nonzero(pivot != iota, axis=-1)
-    sign = jnp.array(-2 * (parity % 2) + 1, dtype=lu.dtype)
-    det = sign * jnp.prod(jnp.diag(lu))
-    return det, (lu, pivot)
-
-
 def _det_lru_no_update(
     Ainv: Array, u: Tuple[Array, Array], v: Tuple[Array, Array]
 ) -> Array:
     R = _get_R(Ainv, u, v)
-    ratio = jnp.linalg.det(R)
+    ratio = det_value(R)
     return ratio
 
 
@@ -129,13 +119,41 @@ def _det_lru_update(
     uT_Ainv_v = jnp.block([[xu_Ainv_ev, xu_Ainv_xv], [eu_Ainv_ev, eu_Ainv_xv]])
     I = jnp.eye(uT_Ainv_v.shape[0], dtype=Ainv.dtype)
     R = I + uT_Ainv_v
-    ratio, lufac = _det_and_lufac(R)
+    # ratio and R^{-1} from one factorization (one fused kernel on GPU)
+    ratio, Rinv = det_inv(R)
 
     uT_Ainv = jnp.concatenate((xu_Ainv, eu_Ainv), axis=0)
-    Rinv_uT_Ainv = jax.scipy.linalg.lu_solve(lufac, uT_Ainv)
+    Rinv_uT_Ainv = Rinv @ uT_Ainv
     Ainv_v = jnp.concatenate((Ainv_ev, Ainv_xv), axis=1)
     Ainv -= Ainv_v @ Rinv_uT_Ainv
     return ratio, Ainv
+
+
+@overload
+def det_lru(
+    Ainv: Array,
+    u: _LowRankVecInput,
+    v: _LowRankVecInput,
+    return_update: Literal[False] = False,
+) -> Array: ...
+
+
+@overload
+def det_lru(
+    Ainv: Array,
+    u: _LowRankVecInput,
+    v: _LowRankVecInput,
+    return_update: Literal[True],
+) -> Tuple[Array, Array]: ...
+
+
+@overload
+def det_lru(
+    Ainv: Array,
+    u: _LowRankVecInput,
+    v: _LowRankVecInput,
+    return_update: bool = False,
+) -> Union[Array, Tuple[Array, Array]]: ...
 
 
 def det_lru(
@@ -476,7 +494,7 @@ def _det_lru_delayed_no_update(
     vT_b = jnp.concatenate((evT_b, xvT_b), axis=1)
 
     R -= jnp.einsum("tkl,tml->km", uT_a, vT_b)
-    ratio = jnp.linalg.det(R)
+    ratio = det_value(R)
     return ratio
 
 
@@ -510,19 +528,49 @@ def _det_lru_delayed_update(
     evT_b = b[:, v[1], :]
     vT_b = jnp.concatenate((evT_b, xvT_b), axis=1)
     R = R0 - jnp.einsum("tkl,tml->km", uT_a, vT_b)
-    ratio, lufac = _det_and_lufac(R)
+    ratio, Rinv = det_inv(R)
 
     a0 = jnp.concatenate((Ainv_ev, Ainv_xv), axis=1)
     new_a = a0 - jnp.einsum("tnk,tlk->nl", a, vT_b)
     bT0 = jnp.concatenate((xu_Ainv, eu_Ainv), axis=0)
     new_bT = bT0 - jnp.einsum("tkl,tnl->kn", uT_a, b)
-    new_bT = jax.scipy.linalg.lu_solve(lufac, new_bT)
+    new_bT = Rinv @ new_bT
 
     a = _update_ab(carrier.a, new_a, current_delay)
     b = _update_ab(carrier.b, new_bT.T, current_delay)
 
     carrier = DetCarrier(Ainv, a, b)
     return ratio, carrier
+
+
+@overload
+def det_lru_delayed(
+    carrier: DetCarrier,
+    u: _LowRankVecInput,
+    v: _LowRankVecInput,
+    return_update: Literal[False] = False,
+    current_delay: Optional[int] = None,
+) -> Array: ...
+
+
+@overload
+def det_lru_delayed(
+    carrier: DetCarrier,
+    u: _LowRankVecInput,
+    v: _LowRankVecInput,
+    return_update: Literal[True],
+    current_delay: Optional[int] = None,
+) -> Tuple[Array, DetCarrier]: ...
+
+
+@overload
+def det_lru_delayed(
+    carrier: DetCarrier,
+    u: _LowRankVecInput,
+    v: _LowRankVecInput,
+    return_update: bool = False,
+    current_delay: Optional[int] = None,
+) -> Union[Array, Tuple[Array, DetCarrier]]: ...
 
 
 def det_lru_delayed(

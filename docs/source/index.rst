@@ -11,7 +11,7 @@ Fast low-rank update (LRU) of matrix determinants and pfaffians in JAX
 Installation
 -------------------------------
 
-Requires Python 3.8+ and JAX 0.4.4+
+Requires Python 3.11+ and JAX 0.7.1+. `fermix <https://github.com/ChenAo-Phys/fermix>`_ is installed automatically as a dependency.
 
 .. code-block::
 
@@ -45,12 +45,14 @@ Low-rank update of pfaffians
    pf_lru_delayed
 
 
-Pfaffian functions
+Utilities
 -------------------------------
+
+The full determinants and pfaffians are computed by
+`fermix <https://github.com/ChenAo-Phys/fermix>`_, which provides
+``det``, ``slogdet``, ``pf``, and ``slogpf``.
 
 .. autosummary::
    :toctree:
 
    skew_eye
-   pf
-   slogpf
