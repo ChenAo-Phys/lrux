@@ -15,6 +15,12 @@ dependencies = [
     "jax>=0.4.4"
 ]
 
+[project.optional-dependencies]
+docs = [
+    "sphinx",
+    "pydata-sphinx-theme",
+]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["lrux*"]
